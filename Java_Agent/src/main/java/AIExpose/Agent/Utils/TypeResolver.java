@@ -1,6 +1,14 @@
 package AIExpose.Agent.Utils;
 
 import java.lang.reflect.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Component;
+
+@Component
 public class TypeResolver {
 
     /**
@@ -14,7 +22,8 @@ public class TypeResolver {
         }
 
         // Case 2: Non-generic direct class (e.g. SampleDto1)
-        if (!(method.getGenericReturnType() instanceof ParameterizedType || ParamSchemaGenerator.isSimpleType(method.getReturnType()))) {
+        if (!(method.getGenericReturnType() instanceof ParameterizedType
+                || ParamSchemaGenerator.isSimpleType(method.getReturnType()))) {
             return method.getReturnType();
         }
 
@@ -25,7 +34,8 @@ public class TypeResolver {
         // Extract inner type recursively
         Type actualTypeArg = paramType.getActualTypeArguments()[0];
 
-        // If it's nested like CompletableFuture<ResponseEntity<SampleDto1>>, handle recursively
+        // If it's nested like CompletableFuture<ResponseEntity<SampleDto1>>, handle
+        // recursively
         if (actualTypeArg instanceof ParameterizedType) {
             return getRawClass(((ParameterizedType) actualTypeArg).getActualTypeArguments()[0]);
         }
@@ -39,13 +49,12 @@ public class TypeResolver {
         return getRawClass(rawType);
     }
 
-
     public static Class<?> resolveActualType(Parameter parameter) {
         Type type = parameter.getParameterizedType();
 
         if (type instanceof ParameterizedType) {
             ParameterizedType paramType = (ParameterizedType) type;
-            if(ParamSchemaGenerator.isSimpleType((Class<?>)paramType.getRawType())){
+            if (ParamSchemaGenerator.isSimpleType((Class<?>) paramType.getRawType())) {
                 System.out.println("actualTypeArg: " + paramType.getRawType());
                 return (Class<?>) paramType.getRawType();
             }
@@ -69,4 +78,42 @@ public class TypeResolver {
             return Object.class;
         }
     }
+
+    public static Object describeType(Type type) {
+        // Base case: if it's a simple class, return its simple name
+        if (type instanceof Class<?> clazz) {
+            return clazz.getSimpleName();
+        }
+
+        // If it's a parameterized type like Map<String, List<SomeDto>>
+        else if (type instanceof ParameterizedType pType) {
+            Map<String, Object> typeInfo = new LinkedHashMap<>();
+            Type rawType = pType.getRawType();
+            typeInfo.put("rawType", ((Class<?>) rawType).getSimpleName());
+
+            Type[] typeArgs = pType.getActualTypeArguments();
+            List<Object> params = new ArrayList<>();
+
+            for (Type arg : typeArgs) {
+                // 🔁 Recursively describe each generic argument
+                params.add(describeType(arg));
+            }
+
+            typeInfo.put("typeParameters", params);
+            return typeInfo;
+        }
+
+        // If it's an array
+        else if (type instanceof GenericArrayType arrayType) {
+            Map<String, Object> typeInfo = new LinkedHashMap<>();
+            typeInfo.put("arrayOf", describeType(arrayType.getGenericComponentType()));
+            return typeInfo;
+        }
+
+        // If it’s a wildcard or type variable (rare)
+        else {
+            return type.getTypeName();
+        }
+    }
+
 }

@@ -1,8 +1,10 @@
 package AIExpose.Agent.Controller;
 
 import AIExpose.Agent.AIExposeEp.AIExposeEPHttpAspect;
+import AIExpose.Agent.AIExposeEp.EndpointScanner;
 import AIExpose.Agent.Annotations.*;
 import AIExpose.Agent.Dtos.ControllerSchema;
+import AIExpose.Agent.Dtos.OutputData;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -23,7 +25,8 @@ public class Data {
   private ApplicationContext applicationContext;
   @Autowired
   private AIExposeEPHttpAspect aiExposeEPHttpAspect;
-  
+  @Autowired
+  private EndpointScanner endpointScanner;
 
     @RequestMapping("/entity-info")
     @ResponseBody
@@ -45,6 +48,36 @@ public class Data {
                     ControllerSchema schema = aiExposeEPHttpAspect.before(method, epAnnotation, aiExposeController);
 
                     Map<String, ControllerSchema> entityMap = new HashMap<>();
+                    entityMap.put(method.getName(), schema);
+                    endpoints.add(entityMap);
+                }
+
+                groupedEndpoints.put(controllerName, endpoints);
+            }
+        }
+
+        return groupedEndpoints;
+    }
+    @RequestMapping("/endpoints-info")
+    @ResponseBody
+    public Map<String, List<Map<String, OutputData>>> getEndpointsInformation() {
+        Map<String, List<Map<String, OutputData>>> groupedEndpoints = new HashMap<>();
+        String[] beanNames = applicationContext.getBeanDefinitionNames();
+
+        for (String beanName : beanNames) {
+            Object bean = applicationContext.getBean(beanName);
+            RestController RestControllerAnnotation = bean.getClass().getAnnotation(RestController.class);
+            AIExposeController aiExposeController = bean.getClass().getAnnotation(AIExposeController.class);
+
+            if (RestControllerAnnotation != null) {
+                String controllerName = bean.getClass().getSimpleName();
+                List<Map<String, OutputData>> endpoints = new ArrayList<>();
+
+                for (Method method : bean.getClass().getDeclaredMethods()) {
+                    AIExposeEpHttp epAnnotation = method.getAnnotation(AIExposeEpHttp.class);
+                    OutputData schema = endpointScanner.before(method, epAnnotation, aiExposeController);
+
+                    Map<String, OutputData> entityMap = new HashMap<>();
                     entityMap.put(method.getName(), schema);
                     endpoints.add(entityMap);
                 }

@@ -5,7 +5,7 @@ fetchAndRender();
 
 async function fetchAndRender() {
   const baseUrl = window.location.origin;
-  const url = `${baseUrl}/entity-info`;
+  const url = `${baseUrl}/endpoints-info`;
   const grid = document.getElementById("grid");
   const empty = document.getElementById("empty");
 
@@ -185,29 +185,165 @@ function renderList(controllers) {
       d.appendChild(content);
       card.appendChild(d);
 
+      // cons
+      const describe = ep.inputsDescribe || {};
       // Populate details content
-      if (Array.isArray(ep.pathParams) && ep.pathParams.length)
-        content.appendChild(makeSection('Path Parameters', makeParamsTable(ep.pathParams)));
-
-      if (Array.isArray(ep.reqParams) && ep.reqParams.length)
-        content.appendChild(makeSection('Query / Req Parameters', makeParamsTable(ep.reqParams)));
-
-      if (Array.isArray(ep.requestBody) && ep.requestBody.length) {
-        ep.requestBody.forEach(rb => {
-          content.appendChild(makeSection(`Request Body — ${rb.className || rb.name || ''}`, makeFieldsTable(rb.fields)));
-        });
+      if (describe.inputPathParams && Object.keys(describe.inputPathParams).length) {
+        content.appendChild(
+          makeSection("Path Parameters", makeParamsTable(describe.inputPathParams))
+        );
       }
 
-      if (ep.responseBody)
-        content.appendChild(makeSection(`Response Body — ${ep.responseBody.className || ''}`, makeFieldsTable(ep.responseBody.fields)));
+      // 🧩 QUERY / REQUEST PARAMETERS
+      if (describe.inputQueryParams && Object.keys(describe.inputQueryParams).length) {
+        content.appendChild(
+          makeSection("Query / Req Parameters", makeParamsTable(describe.inputQueryParams))
+        );
+      }
 
-      if (ep.returnDescription)
-        content.appendChild(makeSection('Return description', createCodeBlock(ep.returnDescription)));
+      // 🧩 HEADERS
+      if (describe.inputHeaders && Object.keys(describe.inputHeaders).length) {
+        content.appendChild(
+          makeSection("Request Headers", makeParamsTable(describe.inputHeaders))
+        );
+      }
+
+      // 🧩 COOKIES
+      if (describe.inputCookies && Object.keys(describe.inputCookies).length) {
+        content.appendChild(
+          makeSection("Request Cookies", makeParamsTable(describe.inputCookies))
+        );
+      }
+
+      // 🧩 VARIABLES
+      if (describe.inputVariables && Object.keys(describe.inputVariables).length) {
+        content.appendChild(
+          makeSection("Input Variables", makeParamsTable(describe.inputVariables))
+        );
+      }
+
+      // 🧩 REQUEST BODY
+      if (
+        describe.inputBody &&
+        describe.inputBody.requestBody &&
+        Object.keys(describe.inputBody.requestBody).length
+      ) {
+        const rb = describe.inputBody.requestBody;
+        if (Array.isArray(rb)) {
+          rb.forEach(r => {
+            content.appendChild(
+              makeSection(
+                `Request Body — ${r.className || r.name || ""}`,
+                makeFieldsTable(r.fields)
+              )
+            );
+          });
+        } else {
+          // when requestBody is not array (like your Map<String, Object>)
+          const bodyInfo = JSON.stringify(rb, null, 2);
+          content.appendChild(
+            makeSection("Request Body", createCodeBlock(bodyInfo))
+          );
+        }
+      }
+
+      // 🧩 RESPONSE BODY
+      if (ep.responseBody) {
+        content.appendChild(
+          makeSection(
+            `Response Body — ${ep.responseBody.className || ""}`,
+            makeFieldsTable(ep.responseBody.fields)
+          )
+        );
+      }
+
+      // 🧩 RETURN DESCRIPTION
+      if (ep.returnDescription) {
+        content.appendChild(
+          makeSection("Return Description", createCodeBlock(ep.returnDescription))
+        );
+      }
+
+      renderDtoSchemas(ep.dtoSchemas, content);
 
       grid.appendChild(card);
     });
   });
 }
+function renderDtoSchemas(dtoSchemas, container) {
+  if (!dtoSchemas || !Object.keys(dtoSchemas).length) return;
+
+  // Container for the whole DTO section
+  const sectionWrapper = document.createElement('div');
+
+  // Title + toggle button
+  const header = document.createElement('div');
+  header.style.display = 'flex';
+  header.style.alignItems = 'center';
+  header.style.justifyContent = 'space-between';
+  header.style.marginBottom = '8px';
+
+  const title = document.createElement('h3');
+  title.textContent = 'DTO Schemas';
+  header.appendChild(title);
+
+  const toggleBtn = document.createElement('button');
+  toggleBtn.textContent = 'Show Details';
+  toggleBtn.style.cursor = 'pointer';
+  toggleBtn.style.padding = '4px 8px';
+  toggleBtn.style.borderRadius = '4px';
+  toggleBtn.style.border = 'none';
+  toggleBtn.style.background = 'var(--accent, #60a5fa)';
+  toggleBtn.style.color = '#fff';
+  header.appendChild(toggleBtn);
+
+  sectionWrapper.appendChild(header);
+
+  // DTO Grid
+  const dtoGrid = document.createElement('div');
+  dtoGrid.className = 'dto-grid';
+  dtoGrid.style.display = 'none'; // initially hidden
+  dtoGrid.style.marginTop = '12px';
+
+  // Loop over each DTO
+  Object.entries(dtoSchemas).forEach(([dtoName, dto]) => {
+    const dtoCard = document.createElement('div');
+    dtoCard.className = 'dto-card';
+
+    // DTO Header
+    const dtoHeader = document.createElement('div');
+    dtoHeader.className = 'dto-header';
+    dtoHeader.innerHTML = `
+      <h4>${escapeHtml(dtoName)}</h4>
+      <p class="dto-class">${escapeHtml(dto.className || '')}</p>
+      <p class="dto-desc">${escapeHtml(dto.description || 'No description')}</p>
+    `;
+    dtoCard.appendChild(dtoHeader);
+
+    // DTO content
+    if (Array.isArray(dto.fields) && dto.fields.length) {
+      const bodyInfo = JSON.stringify(dto, null, 2);
+      dtoCard.appendChild(makeSection("Dto", createCodeBlock(bodyInfo)));
+    } else {
+      const noFields = document.createElement('p');
+      noFields.textContent = 'No fields available.';
+      dtoCard.appendChild(noFields);
+    }
+
+    dtoGrid.appendChild(dtoCard);
+  });
+
+  sectionWrapper.appendChild(dtoGrid);
+  container.appendChild(sectionWrapper);
+
+  // Toggle behavior
+  toggleBtn.addEventListener('click', () => {
+    const isHidden = dtoGrid.style.display === 'none';
+    dtoGrid.style.display = isHidden ? 'flex' : 'none';
+    toggleBtn.textContent = isHidden ? 'Hide Details' : 'Show Details';
+  });
+}
+
 
 // 🔽 Inline “Try It Out” builder (no modal)
 async function openApiTester(ep, container) {
@@ -430,23 +566,46 @@ function makeSection(title, node) {
   return wrapper;
 }
 
-function makeParamsTable(arr) {
+function makeParamsTable(map) {
   const table = document.createElement('table');
   const thead = document.createElement('thead');
-  thead.innerHTML = '<tr><th>Name</th><th>Description</th><th>Type</th><th>Default</th><th>AutoExec</th><th>Options</th><th>Example</th></tr>';
+  thead.innerHTML = `
+    <tr>
+      <th>Key</th>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Type</th>
+      <th>Default</th>
+      <th>AutoExec</th>
+      <th>Options</th>
+      <th>Example</th>
+    </tr>`;
   table.appendChild(thead);
+
   const tbody = document.createElement('tbody');
-  arr.forEach(p => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${escapeHtml(p.name || '')}</td>
-                    <td>${escapeHtml(p.description || '')}</td>
-                  <td>${escapeHtml(p.dataType || '')}</td>
-                  <td>${escapeHtml(p.defaultValue || '')}</td>
-                  <td>${escapeHtml(String(!!p.autoExecute))}</td>
-                  <td>${escapeHtml(p.options || '')}</td>
-                  <td>${escapeHtml(p.example || '')}</td>`;
-    tbody.appendChild(tr);
-  });
+
+  // Convert Map or object into iterable entries
+  const entries = map instanceof Map ? map.entries() : Object.entries(map);
+
+  for (const [key, value] of entries) {
+    // Each value can be an object or an array of objects
+    const params = Array.isArray(value) ? value : [value];
+
+    params.forEach(p => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${escapeHtml(key)}</td>
+        <td>${escapeHtml(p.name || '')}</td>
+        <td>${escapeHtml(p.description || '')}</td>
+        <td>${escapeHtml(p.dataType || '')}</td>
+        <td>${escapeHtml(p.defaultValue || '')}</td>
+        <td>${escapeHtml(String(!!p.autoExecute))}</td>
+        <td>${escapeHtml(p.options || '')}</td>
+        <td>${escapeHtml(p.example || '')}</td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
   table.appendChild(tbody);
   return table;
 }

@@ -12,7 +12,7 @@ import AIExpose.Agent.Utils.ParamSchemaGenerator;
 
 @Component
 public class AIExposeDtoAspect {
-    public DtoSchema scan(Class<?> clazz) {
+    public static DtoSchema scan(Class<?> clazz) {
         DtoSchema dtoSchema = new DtoSchema();
         dtoSchema.setClassName(clazz.getName());
         // System.out.println("Scanning Class: " + clazz.getName());

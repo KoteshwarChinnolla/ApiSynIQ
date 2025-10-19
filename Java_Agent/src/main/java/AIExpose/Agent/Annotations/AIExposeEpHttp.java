@@ -12,6 +12,8 @@ public @interface AIExposeEpHttp {
     String description() default "";
     Describe[] pathParams() default {};
     Describe[] reqParams() default {};
+    Describe[] headers() default {};
+    Describe[] variables() default {};
     boolean autoExecute() default false;
     String returnDescription() default "";
 }

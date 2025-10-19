@@ -14,22 +14,23 @@ import AIExpose.Agent.AIExposeDto.AIExposeDtoAspect;
 import AIExpose.Agent.Dtos.DescribeDto;
 import AIExpose.Agent.Dtos.DtoSchema;
 import AIExpose.Agent.Dtos.InputsDto;
-import AIExpose.Agent.Dtos.ControllerSchema;
+import AIExpose.Agent.Dtos.OutputData;
 import AIExpose.Agent.Annotations.*;
+import AIExpose.Agent.Utils.DTOCollector;
+import AIExpose.Agent.Utils.DescribeSchemaGenerator;
 import AIExpose.Agent.Utils.EndpointBuilder;
 import AIExpose.Agent.Utils.ParamSchemaGenerator;
 import AIExpose.Agent.Utils.TypeResolver;
 import AIExpose.Agent.enums.ParamType;
 
-// @Aspect
 
 @Component
-public class AIExposeEPHttpAspect {
+public class EndpointScanner {
 
     @Autowired
     private EndpointBuilder endpointBuilder;
-    // @Before("@annotation(aiExposeEpHttp)")
-    public ControllerSchema before(Method method, AIExposeEpHttp aiExposeEpHttp, AIExposeController aiExposeController) {
+
+    public OutputData before(Method method, AIExposeEpHttp aiExposeEpHttp, AIExposeController aiExposeController) {
         String name = method.getName();
         String des = "";
         if(aiExposeController != null){
@@ -50,7 +51,8 @@ public class AIExposeEPHttpAspect {
         String description = des.isEmpty() ? "No description provided." : des;
         Boolean autoExecute = true;
         String returnDescription = "No return description provided.";
-        ControllerSchema controllerSchema = new ControllerSchema();
+        // ControllerSchema controllerSchema = new ControllerSchema();
+        OutputData controllerSchema = new OutputData();
         if (aiExposeEpHttp != null) {
             controllerSchema.setName(!aiExposeEpHttp.name().isEmpty() ? aiExposeEpHttp.name() : name);
             controllerSchema.setEndpoint(!aiExposeEpHttp.example().isEmpty() ? aiExposeEpHttp.example() : endpoint);
@@ -58,20 +60,8 @@ public class AIExposeEPHttpAspect {
             controllerSchema.setTags(aiExposeEpHttp.tags().length > 0 ?  aiExposeEpHttp.tags() : tags);
             controllerSchema.setDescription(!aiExposeEpHttp.description().isEmpty() ? aiExposeEpHttp.description() : description);
             controllerSchema.setAutoExecute(aiExposeEpHttp.autoExecute() || autoExecute);
-            controllerSchema.setResponseBody(AIExposeDtoAspect.scan(TypeResolver.resolveActualReturnType(method)));
-            controllerSchema.setRequestBody(buildRequestBodySchemas(method));
+            controllerSchema.setResponseBody(TypeResolver.describeType(TypeResolver.resolveActualReturnType(method)));
             controllerSchema.setReturnDescription(!aiExposeEpHttp.returnDescription().isEmpty() ? aiExposeEpHttp.returnDescription() : returnDescription);
-            controllerSchema.setPathParams(
-                annotationToDescribe(aiExposeEpHttp.pathParams()).isEmpty()
-                    ? paramsToDescribe(method.getParameters(), ParamType.PATH_PARAM)
-                    : annotationToDescribe(aiExposeEpHttp.pathParams())
-            );
-
-            controllerSchema.setReqParams(
-                annotationToDescribe(aiExposeEpHttp.reqParams()).isEmpty()
-                    ? paramsToDescribe(method.getParameters(), ParamType.REQUEST_PARAM)
-                    : annotationToDescribe(aiExposeEpHttp.reqParams())
-            );
         }
         else {
             controllerSchema.setName(name);
@@ -80,17 +70,17 @@ public class AIExposeEPHttpAspect {
             controllerSchema.setTags(tags);
             controllerSchema.setDescription(description);
             controllerSchema.setAutoExecute(true);
-            controllerSchema.setResponseBody(AIExposeDtoAspect.scan(TypeResolver.resolveActualReturnType(method)));
-            controllerSchema.setRequestBody(buildRequestBodySchemas(method));
+            controllerSchema.setResponseBody(TypeResolver.describeType(TypeResolver.resolveActualReturnType(method)));
             controllerSchema.setReturnDescription(returnDescription);
-            controllerSchema.setPathParams(paramsToDescribe(method.getParameters(), ParamType.PATH_PARAM));
-            controllerSchema.setReqParams(paramsToDescribe(method.getParameters(), ParamType.REQUEST_PARAM));
         }
         Object outputBody = ParamSchemaGenerator.generateClassSchema(TypeResolver.resolveActualReturnType(method), new HashMap<>(), 0);
         controllerSchema.setOutputBody(outputBody);
         InputsDto inputs = ParamSchemaGenerator.generateMethodParamSchema(method);
+        InputsDto inputsDescribe = DescribeSchemaGenerator.generateDescribeSchema(method);
+        controllerSchema.setInputsDescribe(inputsDescribe);
         controllerSchema.setInputs(inputs);
         controllerSchema.setFilteringTags(filteringTags);
+        controllerSchema.setDtoSchemas(DTOCollector.DescribedDtosForMethods(method));
         return controllerSchema;
     }
 
