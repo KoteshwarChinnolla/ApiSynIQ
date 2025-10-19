@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>API Endpoints Viewer</title>
+  <!-- Axios CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <link rel="stylesheet" href="./style.css">
+
+</head>
+
+<body>
+  <div class="wrap">
+    <header>
+      <h1>API Endpoints Viewer</h1>
+      <div class="controls">
+        <input id="q" type="search" placeholder="Search name, endpoint, param..." />
+        <button id="reset">Reset</button>
+        <button id="download">Download JSON</button>
+      </div>
+    </header>
+    <div class="controllerBar">
+      <ul id="menuContainer" class="hList"></ul>
+    </div>
+    
+    <div id="filterBar" class="filter-bar">
+      <div class="tag-filters">
+        <div id="tagButtons" class="button-group"></div>
+      </div>
+    </div>
+
+
+    <main id="main">
+      <div id="count" style="color:var(--muted)"></div>
+      <div id="grid" class="grid"></div>
+      <div id="empty" class="empty" style="display:none">No endpoints matched your search.</div>
+    </main>
+
+    <footer>
+      Tip: click a card's "Details" dropdown to see path params, request body and response body.
+    </footer>
+  </div>
+   <script src="./script.js"></script>
+</body>
+
+</html>
