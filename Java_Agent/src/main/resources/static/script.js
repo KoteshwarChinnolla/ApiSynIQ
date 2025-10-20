@@ -283,19 +283,16 @@ function renderDtoSchemas(dtoSchemas, container) {
   header.style.justifyContent = 'space-between';
   header.style.marginBottom = '8px';
 
-  const title = document.createElement('h3');
-  title.textContent = 'DTO Schemas';
+  const title = document.createElement('p');
+  title.textContent = '▶ DTO Schemas';
+  title.style.cursor = 'pointer';
+  title.style.padding = '4px 8px 4px 16px';
+  title.style.borderRadius = '4px';
+  title.style.border = 'none';
+  title.style.background = 'linear-gradient(to right, #aafa60ff, #aafa60ff)';
+  title.style.color = '#002c39ff';
   header.appendChild(title);
 
-  const toggleBtn = document.createElement('button');
-  toggleBtn.textContent = 'Show Details';
-  toggleBtn.style.cursor = 'pointer';
-  toggleBtn.style.padding = '4px 8px';
-  toggleBtn.style.borderRadius = '4px';
-  toggleBtn.style.border = 'none';
-  toggleBtn.style.background = 'var(--accent, #60a5fa)';
-  toggleBtn.style.color = '#fff';
-  header.appendChild(toggleBtn);
 
   sectionWrapper.appendChild(header);
 
@@ -337,10 +334,10 @@ function renderDtoSchemas(dtoSchemas, container) {
   container.appendChild(sectionWrapper);
 
   // Toggle behavior
-  toggleBtn.addEventListener('click', () => {
+  title.addEventListener('click', () => {
     const isHidden = dtoGrid.style.display === 'none';
     dtoGrid.style.display = isHidden ? 'flex' : 'none';
-    toggleBtn.textContent = isHidden ? 'Hide Details' : 'Show Details';
+    title.textContent = isHidden ? '▼ DTO Schemas' : '▶ DTO Schemas';
   });
 }
 
