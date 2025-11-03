@@ -8,10 +8,10 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InputsDto {
-  private Map<String, Object> inputBody = new HashMap<>();
-  private Map<String, Object> inputPathParams = new HashMap<>();
-  private Map<String, Object> inputQueryParams = new HashMap<>();
-  private Map<String, Object> inputVariables = new HashMap<>();
-  private Map<String, Object> inputHeaders = new HashMap<>();
-  private Map<String, Object> inputCookies = new HashMap<>();
+  private Map<String, String> inputBody = new HashMap<>();
+  private Map<String, String> inputPathParams = new HashMap<>();
+  private Map<String, String> inputQueryParams = new HashMap<>();
+  private Map<String, String> inputVariables = new HashMap<>();
+  private Map<String, String> inputHeaders = new HashMap<>();
+  private Map<String, String> inputCookies = new HashMap<>();
 }

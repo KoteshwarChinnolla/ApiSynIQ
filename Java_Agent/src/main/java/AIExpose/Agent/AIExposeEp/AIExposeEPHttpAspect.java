@@ -4,6 +4,8 @@ import java.lang.reflect.*;
 import java.util.*;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,8 +31,9 @@ public class AIExposeEPHttpAspect {
     @Autowired
     private EndpointBuilder endpointBuilder;
     // @Before("@annotation(aiExposeEpHttp)")
-    public ControllerSchema before(Method method, AIExposeEpHttp aiExposeEpHttp, AIExposeController aiExposeController) {
+    public ControllerSchema before(Method method, AIExposeEpHttp aiExposeEpHttp, AIExposeController aiExposeController) throws JsonProcessingException {
         String name = method.getName();
+        ObjectMapper mapper = new ObjectMapper();
         String des = "";
         if(aiExposeController != null){
             des = aiExposeController.description().isEmpty() ? "" : aiExposeController.description();
@@ -40,7 +43,7 @@ public class AIExposeEPHttpAspect {
         if (aiExposeEpHttp == null && aiExposeController == null) {
             filteringTags = Arrays.asList("All");
         } else if (aiExposeEpHttp != null && aiExposeController == null) {
-            filteringTags = Arrays.asList("all", "aiExposeEpHttp");   
+            filteringTags = Arrays.asList("all", "aiExposeEpHttp");
         } else if (aiExposeEpHttp == null && aiExposeController != null) {
             filteringTags = Arrays.asList("all", "aiExposeController");
         } else {
@@ -87,7 +90,7 @@ public class AIExposeEPHttpAspect {
             controllerSchema.setReqParams(paramsToDescribe(method.getParameters(), ParamType.REQUEST_PARAM));
         }
         Object outputBody = ParamSchemaGenerator.generateClassSchema(TypeResolver.resolveActualReturnType(method), new HashMap<>(), 0);
-        controllerSchema.setOutputBody(outputBody);
+        controllerSchema.setOutputBody(mapper.writeValueAsString(outputBody));
         InputsDto inputs = ParamSchemaGenerator.generateMethodParamSchema(method);
         controllerSchema.setInputs(inputs);
         controllerSchema.setFilteringTags(filteringTags);
@@ -99,7 +102,7 @@ public class AIExposeEPHttpAspect {
         List<DtoSchema> reqBodySchemas = new ArrayList<>();
 
         for (Parameter parameter : method.getParameters()) {
-            
+
             if (parameter.isAnnotationPresent(RequestBody.class)) {
                 Class<?> actualType = TypeResolver.resolveActualType(parameter);
                 DtoSchema schema = AIExposeDtoAspect.scan(actualType);

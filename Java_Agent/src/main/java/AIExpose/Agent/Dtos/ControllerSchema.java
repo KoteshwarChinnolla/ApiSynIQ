@@ -22,6 +22,6 @@ public class ControllerSchema {
   private DtoSchema responseBody;
   private boolean autoExecute;
   private InputsDto inputs;
-  private Object outputBody;
+  private String outputBody;
   private List<String> filteringTags;
 }

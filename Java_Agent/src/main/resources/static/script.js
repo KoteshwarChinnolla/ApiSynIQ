@@ -228,9 +228,10 @@ function renderList(controllers) {
         describe.inputBody.requestBody &&
         Object.keys(describe.inputBody.requestBody).length
       ) {
-        const rb = describe.inputBody.requestBody;
+        const rb = JSON.parse(describe.inputBody.requestBody);
         if (Array.isArray(rb)) {
-          rb.forEach(r => {
+          rb.forEach(rv => {
+           const r = JSON.parse(rv)
             content.appendChild(
               makeSection(
                 `Request Body — ${r.className || r.name || ""}`,
@@ -249,6 +250,7 @@ function renderList(controllers) {
 
       // 🧩 RESPONSE BODY
       if (ep.responseBody) {
+//        const rb = JSON.parse(ep.responseBody)
         content.appendChild(
           makeSection(
             `Response Body — ${ep.responseBody.className || ""}`,
@@ -431,6 +433,7 @@ async function openApiTester(ep, container) {
 function buildInputJson(container, obj, title) {
   if (!obj) return;
 
+
   const section = document.createElement('div');
   section.className = 'input-section';
   section.innerHTML = `<h3>${title}</h3>`;
@@ -438,7 +441,7 @@ function buildInputJson(container, obj, title) {
   // Create editable textarea instead of code block
   const textarea = document.createElement('textarea');
   textarea.className = 'json-input';
-  textarea.value = JSON.stringify(obj, null, 2);
+  textarea.value = JSON.stringify(JSON.parse(obj), null, 2);
   textarea.style.width = '100%';
   textarea.style.minHeight = '300px';
   textarea.style.fontFamily = 'monospace';
@@ -608,7 +611,7 @@ function makeParamsTable(map) {
 }
 
 function makeFieldsTable(arr) {
-  if (!Array.isArray(arr) || !arr.length) return createCodeBlock('— no fields —');
+  if (!Array.isArray(arr) || !arr.length) return createCodeBlock('-- no value provided --');
   const table = document.createElement('table');
   const thead = document.createElement('thead');
   thead.innerHTML = '<tr><th>Name</th><th>Description</th><th>Type</th><th>Default</th><th>AutoExec</th><th>Options</th><th>Example</th></tr>';
@@ -629,9 +632,9 @@ function makeFieldsTable(arr) {
   return table;
 }
 
-function createCodeBlock(text) {
+function createCodeBlock(t) {
   const pre = document.createElement('pre');
-  pre.textContent = typeof text === 'object' ? JSON.stringify(text, null, 2) : text;
+  pre.textContent = typeof text === 'object' ? JSON.stringify(JSON.parse(t), null, 2) : t;
   return pre;
 }
 

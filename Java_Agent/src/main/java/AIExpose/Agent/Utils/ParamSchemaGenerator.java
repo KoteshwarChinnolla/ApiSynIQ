@@ -4,6 +4,8 @@ import java.lang.reflect.*;
 import java.time.*;
 import java.util.*;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -12,8 +14,9 @@ import AIExpose.Agent.Dtos.InputsDto;
 
 public class ParamSchemaGenerator {
 
-    public static InputsDto generateMethodParamSchema(Method method) {
+    public static InputsDto generateMethodParamSchema(Method method) throws JsonProcessingException {
         InputsDto inputsDto = new InputsDto();
+        ObjectMapper mapper = new ObjectMapper();
 
         for (Parameter parameter : method.getParameters()) {
             Class<?> paramType = parameter.getType();
@@ -24,26 +27,26 @@ public class ParamSchemaGenerator {
             if (parameter.isAnnotationPresent(PathVariable.class)) {
                 PathVariable pv = parameter.getAnnotation(PathVariable.class);
                 String name = !pv.value().isEmpty() ? pv.value() : paramName;
-                inputsDto.getInputPathParams().put(name, sampleValue(paramType));
+                inputsDto.getInputPathParams().put(name, mapper.writeValueAsString(sampleValue(paramType)));
             }
 
             // ✅ REQUEST PARAM
             else if (parameter.isAnnotationPresent(RequestParam.class)) {
                 RequestParam rp = parameter.getAnnotation(RequestParam.class);
                 String name = !rp.value().isEmpty() ? rp.value() : paramName;
-                inputsDto.getInputQueryParams().put(name, sampleValue(paramType));
+                inputsDto.getInputQueryParams().put(name, mapper.writeValueAsString(sampleValue(paramType)));
             }
 
             // ✅ REQUEST BODY
             else if (parameter.isAnnotationPresent(RequestBody.class)) {
-                inputsDto.getInputBody().put("requestBody", generateClassSchema(paramGenericType, new HashMap<>(), 0));
+                inputsDto.getInputBody().put("requestBody", mapper.writeValueAsString(generateClassSchema(paramGenericType, new HashMap<>(), 0)));
             }
 
             // ✅ REQUEST HEADER
             else if (parameter.isAnnotationPresent(RequestHeader.class)) {
                 RequestHeader rh = parameter.getAnnotation(RequestHeader.class);
                 String name = !rh.value().isEmpty() ? rh.value() : paramName;
-                inputsDto.getInputHeaders().put(name, sampleValue(paramType));
+                inputsDto.getInputHeaders().put(name, mapper.writeValueAsString(sampleValue(paramType)));
             }
 
             // ✅ VARIABLE / DTO PARAM
@@ -53,9 +56,9 @@ public class ParamSchemaGenerator {
                     && !parameter.isAnnotationPresent(RequestHeader.class)) {
 
                 if (isSimpleType(paramType)) {
-                    inputsDto.getInputVariables().put(paramName, sampleValue(paramType));
+                    inputsDto.getInputVariables().put(paramName, mapper.writeValueAsString(sampleValue(paramType)));
                 } else {
-                    inputsDto.getInputVariables().put(paramName, generateClassSchema(paramGenericType, new HashMap<>(), 0));
+                    inputsDto.getInputVariables().put(paramName, mapper.writeValueAsString(generateClassSchema(paramGenericType, new HashMap<>(), 0)));
                 }
             }
         }

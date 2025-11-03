@@ -4,6 +4,7 @@ import java.lang.reflect.*;
 import java.util.*;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -30,7 +31,7 @@ public class EndpointScanner {
     @Autowired
     private EndpointBuilder endpointBuilder;
 
-    public OutputData before(Method method, AIExposeEpHttp aiExposeEpHttp, AIExposeController aiExposeController) {
+    public OutputData before(Method method, AIExposeEpHttp aiExposeEpHttp, AIExposeController aiExposeController) throws JsonProcessingException {
         String name = method.getName();
         String des = "";
         if(aiExposeController != null){
@@ -60,7 +61,7 @@ public class EndpointScanner {
             controllerSchema.setTags(aiExposeEpHttp.tags().length > 0 ?  aiExposeEpHttp.tags() : tags);
             controllerSchema.setDescription(!aiExposeEpHttp.description().isEmpty() ? aiExposeEpHttp.description() : description);
             controllerSchema.setAutoExecute(aiExposeEpHttp.autoExecute() || autoExecute);
-            controllerSchema.setResponseBody(TypeResolver.describeType(TypeResolver.resolveActualReturnType(method)));
+            controllerSchema.setResponseBody(String.valueOf(TypeResolver.describeType(TypeResolver.resolveActualReturnType(method))));
             controllerSchema.setReturnDescription(!aiExposeEpHttp.returnDescription().isEmpty() ? aiExposeEpHttp.returnDescription() : returnDescription);
         }
         else {
@@ -70,11 +71,11 @@ public class EndpointScanner {
             controllerSchema.setTags(tags);
             controllerSchema.setDescription(description);
             controllerSchema.setAutoExecute(true);
-            controllerSchema.setResponseBody(TypeResolver.describeType(TypeResolver.resolveActualReturnType(method)));
+            controllerSchema.setResponseBody(String.valueOf(TypeResolver.describeType(TypeResolver.resolveActualReturnType(method))));
             controllerSchema.setReturnDescription(returnDescription);
         }
         Object outputBody = ParamSchemaGenerator.generateClassSchema(TypeResolver.resolveActualReturnType(method), new HashMap<>(), 0);
-        controllerSchema.setOutputBody(outputBody);
+        controllerSchema.setOutputBody(String.valueOf(outputBody));
         InputsDto inputs = ParamSchemaGenerator.generateMethodParamSchema(method);
         InputsDto inputsDescribe = DescribeSchemaGenerator.generateDescribeSchema(method);
         controllerSchema.setInputsDescribe(inputsDescribe);

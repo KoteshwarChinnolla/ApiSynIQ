@@ -1,0 +1,40 @@
+grpc:
+    server:
+        port: 7322
+        enable-reflection: true
+server:
+  address: 0.0.0.0
+  port: 7321
+
+spring:
+  application:
+    name: ApiResolver
+  ai:
+    ollama:
+      base-url: http://localhost:11434
+      init:
+        pull-model-strategy: when_missing
+        timeout: 500ms
+      chat:
+        options:
+          model: tinydolphin
+      embedding:
+        options:
+          model: nomic-embed-text
+    vectorstore:
+      pgvector:
+        initialize-schema: true
+        dimensions: 1536
+        index-type: hnsw
+        schema-validation: true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/spring
+    username: postgres
+    password: koti21
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: create

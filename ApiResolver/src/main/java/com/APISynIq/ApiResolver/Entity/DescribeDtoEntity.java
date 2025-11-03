@@ -1,0 +1,39 @@
+package com.APISynIq.ApiResolver.Entity;
+
+
+import com.apisyniq.grpc.DescribeDto;
+
+import jakarta.persistence.*;
+import lombok.*;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Entity
+@Builder
+@Table(name = "describe_dto")
+public class DescribeDtoEntity {
+  @Id
+  @GeneratedValue(strategy = GenerationType.IDENTITY)
+  private Long id;
+  private String name;
+  private String description;
+  private String dataType;
+  private String defaultValue;
+  private String options;
+  private boolean autoExecute;
+  private String example;
+
+
+  public DescribeDto toGrpcDescribeDto() {
+    com.apisyniq.grpc.DescribeDto.Builder builder = com.apisyniq.grpc.DescribeDto.newBuilder()
+        .setName(this.name != null ? this.name : "")
+        .setDescription(this.description != null ? this.description : "")
+        .setDataType(this.dataType != null ? this.dataType : "")
+        .setDefaultValue(this.defaultValue != null ? this.defaultValue : "")
+        .setOptions(this.options != null ? this.options : "")
+        .setAutoExecute(this.autoExecute)
+        .setExample(this.example != null ? this.example : "");
+    return builder.build();
+  }
+}

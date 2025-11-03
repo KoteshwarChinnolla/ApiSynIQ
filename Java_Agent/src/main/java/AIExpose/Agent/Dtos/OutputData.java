@@ -17,10 +17,10 @@ public class OutputData {
   private String description = "No description provided.";
   private String returnDescription = "No return description provided.";
   private InputsDto inputsDescribe;
-  private Object responseBody = null; 
+  private String responseBody = null;
   private boolean autoExecute = true;
   private InputsDto inputs;
-  private Object outputBody;
+  private String outputBody;
   private List<String> filteringTags = new ArrayList<>();
   private Map<String, DtoSchema> dtoSchemas = new HashMap<>();
 }

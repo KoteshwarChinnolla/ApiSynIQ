@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Map;
 
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Controller;
@@ -25,12 +26,13 @@ public class Data {
   private ApplicationContext applicationContext;
   @Autowired
   private AIExposeEPHttpAspect aiExposeEPHttpAspect;
+
   @Autowired
   private EndpointScanner endpointScanner;
 
     @RequestMapping("/entity-info")
     @ResponseBody
-    public Map<String, List<Map<String, ControllerSchema>>> getEntityInformation() {
+    public Map<String, List<Map<String, ControllerSchema>>> getEntityInformation() throws JsonProcessingException {
         Map<String, List<Map<String, ControllerSchema>>> groupedEndpoints = new HashMap<>();
         String[] beanNames = applicationContext.getBeanDefinitionNames();
 
@@ -60,7 +62,7 @@ public class Data {
     }
     @RequestMapping("/endpoints-info")
     @ResponseBody
-    public Map<String, List<Map<String, OutputData>>> getEndpointsInformation() {
+    public Map<String, List<Map<String, OutputData>>> getEndpointsInformation() throws JsonProcessingException {
         Map<String, List<Map<String, OutputData>>> groupedEndpoints = new HashMap<>();
         String[] beanNames = applicationContext.getBeanDefinitionNames();
 
