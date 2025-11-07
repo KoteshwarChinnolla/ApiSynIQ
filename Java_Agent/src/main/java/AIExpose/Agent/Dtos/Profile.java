@@ -11,9 +11,9 @@ import lombok.*;
         "\"fieldA\": \"ExampleA\"," +
         "\"fieldB\": 123" +
         "}")
-public class SampleDto3 {
+public class Profile {
     @Describe(name = "Field A", description = "This is field A", dataType = "String", autoExecute = false, example = "ExampleA")
-    private String fieldA;
+    private String name;
     @Describe(name = "Field B", description = "This is field B", dataType = "int", autoExecute = false, example = "123")
-    private int fieldB;
+    private int id;
 }

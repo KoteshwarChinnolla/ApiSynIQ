@@ -5,6 +5,7 @@ import java.util.*;
 
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -75,13 +76,17 @@ public class EndpointScanner {
             controllerSchema.setReturnDescription(returnDescription);
         }
         Object outputBody = ParamSchemaGenerator.generateClassSchema(TypeResolver.resolveActualReturnType(method), new HashMap<>(), 0);
-        controllerSchema.setOutputBody(String.valueOf(outputBody));
+        ObjectMapper mapper = new ObjectMapper();
+        controllerSchema.setOutputBody(mapper.writeValueAsString(outputBody));
         InputsDto inputs = ParamSchemaGenerator.generateMethodParamSchema(method);
-        InputsDto inputsDescribe = DescribeSchemaGenerator.generateDescribeSchema(method);
+        Map<String, DescribeDto> describeDtosForParms = new HashMap<>();
+        InputsDto inputsDescribe = DescribeSchemaGenerator.generateDescribeSchema(method, describeDtosForParms);
+        controllerSchema.setDescribeDtosForParms(describeDtosForParms);
         controllerSchema.setInputsDescribe(inputsDescribe);
         controllerSchema.setInputs(inputs);
         controllerSchema.setFilteringTags(filteringTags);
         controllerSchema.setDtoSchemas(DTOCollector.DescribedDtosForMethods(method));
+
         return controllerSchema;
     }
 

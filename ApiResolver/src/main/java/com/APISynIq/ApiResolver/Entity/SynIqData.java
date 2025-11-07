@@ -57,6 +57,11 @@ public class SynIqData {
   @MapKeyColumn(name = "key_name")
   private Map<String, DtoSchemaEntity> dtoSchemas = new HashMap<>();
 
+  @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
+  @JoinColumn(name = "syniq_data_id")
+  @MapKeyColumn(name = "key_name")
+  private Map<String, DescribeDtoEntity> describeDtosForParms = new HashMap<>();
+
 
   @Column(columnDefinition = "vector(1536)")
   private float[] descriptionEmbedding;
@@ -81,6 +86,10 @@ public class SynIqData {
       for (Map.Entry<String, DtoSchemaEntity> entry : this.dtoSchemas.entrySet()) {
           builder.putDtoSchemas(entry.getKey(), entry.getValue().toGrpcDtoSchema());
       }
+      for (Map.Entry<String, DescribeDtoEntity> entry : this.describeDtosForParms.entrySet()) {
+          builder.putDescribeDtosForParms(entry.getKey(), entry.getValue().toGrpcDescribeDto());
+      }
+
       if (this.tags != null) {
           builder.addAllTags(this.tags);
       }

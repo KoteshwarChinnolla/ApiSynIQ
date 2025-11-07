@@ -22,7 +22,10 @@ message InputData {
     string outputBody = 11;
     repeated string filteringTags = 12;
     map<string, DtoSchema> dtoSchemas = 13;
+    map<string, DescribeDto> describeDtosForParms= 14;
 }
+
+
 message InputsDto {
     map<string, string> inputBody = 1;
     map<string, string> inputPathParams = 2;

@@ -14,13 +14,14 @@ spring:
       base-url: http://localhost:11434
       init:
         pull-model-strategy: when_missing
-        timeout: 500ms
+        timeout: 10s
       chat:
         options:
           model: tinydolphin
       embedding:
         options:
-          model: nomic-embed-text
+#          model: nomic-embed-text
+           model: all-minilm
     vectorstore:
       pgvector:
         initialize-schema: true
@@ -28,7 +29,7 @@ spring:
         index-type: hnsw
         schema-validation: true
   datasource:
-    url: jdbc:postgresql://localhost:5432/spring
+    url: jdbc:postgresql://localhost:5432/apis
     username: postgres
     password: koti21
     driver-class-name: org.postgresql.Driver
@@ -37,4 +38,4 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: create
+      ddl-auto: update

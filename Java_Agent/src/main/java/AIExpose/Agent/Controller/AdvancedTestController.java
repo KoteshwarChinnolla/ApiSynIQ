@@ -1,7 +1,9 @@
 package AIExpose.Agent.Controller;
 
 import AIExpose.Agent.Annotations.*;
-import AIExpose.Agent.Dtos.SampleDto1;
+import AIExpose.Agent.Dtos.EmployeeInfo;
+import AIExpose.Agent.Dtos.EmployeeInfo;
+import AIExpose.Agent.Dtos.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -86,19 +88,22 @@ public class AdvancedTestController {
      * - Deeply nested structure in body
      */
     @AIExposeEpHttp(
-        name = "NestedDtoList",
-        description = "Receives a list of DTOs wrapped inside a map for advanced JSON parsing",
+        name = "Details",
+        description = "A form to fill or post all the primary details of an employee, used when the employee first enter the company. This include all the primary details of the employee which essential for employee management",
         autoExecute = true,
-        tags = {"Nested", "DTO", "JSON"}
+        tags = {"Employee", "Post", "Details", "fill", "JSON"}, 
+        pathParams=@Describe(name="employeeName", description="Full name of the employee", dataType="String", autoExecute=false, example = "Koteshwar"),
+        reqParams=@Describe(name="employeeId", description = "Id of the employee which will be unique amound all the employees", dataType="String", autoExecute=false, example="ACS0000001"),
+        returnDescription="Returns the Name and Id of the employee"
     )
-    @PostMapping("/nested/dtos")
-    public ResponseEntity<Map<String, Object>> nestedDtoHandler(
-            @RequestBody Map<String, List<SampleDto1>> dtoMap
+    @PostMapping("/employee/primary/{employeeName}")
+    public ResponseEntity<Profile> nestedDtoHandler(
+            @RequestBody EmployeeInfo dtoMap, @PathVariable String employeeName, @RequestParam String employeeId
     ) {
-        Map<String, Object> response = new LinkedHashMap<>();
-        response.put("received", dtoMap);
-        response.put("count", dtoMap.values().stream().mapToInt(List::size).sum());
-        return ResponseEntity.ok(response);
+        Profile sdto3 = new Profile();
+        sdto3.setName("fieldA");
+        sdto3.setId(2);
+        return ResponseEntity.ok(sdto3);
     }
 
     /**
@@ -164,7 +169,7 @@ public class AdvancedTestController {
 
     @AIExposeEpHttp
     @PostMapping("/echo/json")
-    public ResponseEntity<SampleDto1> echoJson(@RequestBody SampleDto1 message) {
+    public ResponseEntity<EmployeeInfo> echoJson(@RequestBody EmployeeInfo message) {
         return ResponseEntity.ok(message);
     }
 }

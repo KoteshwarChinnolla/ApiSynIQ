@@ -190,21 +190,21 @@ function renderList(controllers) {
       // Populate details content
       if (describe.inputPathParams && Object.keys(describe.inputPathParams).length) {
         content.appendChild(
-          makeSection("Path Parameters", makeParamsTable(describe.inputPathParams))
+          makeSection("Path Parameters", makeParamsTable(describe.inputPathParams, ep.describeDtosForParms))
         );
       }
 
       // 🧩 QUERY / REQUEST PARAMETERS
       if (describe.inputQueryParams && Object.keys(describe.inputQueryParams).length) {
         content.appendChild(
-          makeSection("Query / Req Parameters", makeParamsTable(describe.inputQueryParams))
+          makeSection("Query / Req Parameters", makeParamsTable(describe.inputQueryParams, ep.describeDtosForParms))
         );
       }
 
       // 🧩 HEADERS
       if (describe.inputHeaders && Object.keys(describe.inputHeaders).length) {
         content.appendChild(
-          makeSection("Request Headers", makeParamsTable(describe.inputHeaders))
+          makeSection("Request Headers", makeParamsTable(describe.inputHeaders, ep.describeDtosForParms))
         );
       }
 
@@ -218,7 +218,7 @@ function renderList(controllers) {
       // 🧩 VARIABLES
       if (describe.inputVariables && Object.keys(describe.inputVariables).length) {
         content.appendChild(
-          makeSection("Input Variables", makeParamsTable(describe.inputVariables))
+          makeSection("Input Variables", makeParamsTable(describe.inputVariables, ep.describeDtosForParms))
         );
       }
 
@@ -250,13 +250,10 @@ function renderList(controllers) {
 
       // 🧩 RESPONSE BODY
       if (ep.responseBody) {
-//        const rb = JSON.parse(ep.responseBody)
-        content.appendChild(
-          makeSection(
-            `Response Body — ${ep.responseBody.className || ""}`,
-            makeFieldsTable(ep.responseBody.fields)
-          )
-        );
+          const bodyInfo = JSON.stringify(ep.responseBody, null, 2);
+          content.appendChild(
+            makeSection("Request Body", createCodeBlock(bodyInfo))
+          );
       }
 
       // 🧩 RETURN DESCRIPTION
@@ -566,49 +563,61 @@ function makeSection(title, node) {
   return wrapper;
 }
 
-function makeParamsTable(map) {
-  const table = document.createElement('table');
-  const thead = document.createElement('thead');
-  thead.innerHTML = `
-    <tr>
-      <th>Key</th>
-      <th>Name</th>
-      <th>Description</th>
-      <th>Type</th>
-      <th>Default</th>
-      <th>AutoExec</th>
-      <th>Options</th>
-      <th>Example</th>
-    </tr>`;
-  table.appendChild(thead);
+function makeParamsTable(map, listDescribeDtos) {
+    console.log(map);
+     console.log(listDescribeDtos);
+   const table = document.createElement('table');
+   const thead = document.createElement('thead');
+   thead.innerHTML = `
+     <tr>
+       <th>Key</th>
+       <th>Name</th>
+       <th>Description</th>
+       <th>Type</th>
+       <th>Default</th>
+       <th>AutoExec</th>
+       <th>Options</th>
+       <th>Example</th>
+     </tr>`;
+   table.appendChild(thead);
 
-  const tbody = document.createElement('tbody');
+   const tbody = document.createElement('tbody');
 
-  // Convert Map or object into iterable entries
-  const entries = map instanceof Map ? map.entries() : Object.entries(map);
+   // Convert Map or object into iterable entries
+   const entries = map instanceof Map ? map.entries() : Object.entries(map);
 
-  for (const [key, value] of entries) {
-    // Each value can be an object or an array of objects
-    const params = Array.isArray(value) ? value : [value];
+   for (const [key, value] of entries) {
+     // Value might be a JSON string → parse it
+     console.log(key)
+     console.log(value)
+     let parsedValue;
+     try {
+       parsedValue = listDescribeDtos[key];
+     } catch (e) {
+       console.warn(`Failed to parse value for key "${key}":`, e);
+       parsedValue = {}; // fallback to empty object
+     }
 
-    params.forEach(p => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${escapeHtml(key)}</td>
-        <td>${escapeHtml(p.name || '')}</td>
-        <td>${escapeHtml(p.description || '')}</td>
-        <td>${escapeHtml(p.dataType || '')}</td>
-        <td>${escapeHtml(p.defaultValue || '')}</td>
-        <td>${escapeHtml(String(!!p.autoExecute))}</td>
-        <td>${escapeHtml(p.options || '')}</td>
-        <td>${escapeHtml(p.example || '')}</td>`;
-      tbody.appendChild(tr);
-    });
-  }
+     const params = Array.isArray(parsedValue) ? parsedValue : [parsedValue];
 
-  table.appendChild(tbody);
-  return table;
-}
+     params.forEach(p => {
+       const tr = document.createElement('tr');
+       tr.innerHTML = `
+         <td>${escapeHtml(key)}</td>
+         <td>${escapeHtml(p.name || '')}</td>
+         <td>${escapeHtml(p.description || '')}</td>
+         <td>${escapeHtml(p.dataType || '')}</td>
+         <td>${escapeHtml(p.defaultValue || '')}</td>
+         <td>${escapeHtml(String(!!p.autoExecute))}</td>
+         <td>${escapeHtml(p.options || '')}</td>
+         <td>${escapeHtml(p.example || '')}</td>`;
+       tbody.appendChild(tr);
+     });
+   }
+
+   table.appendChild(tbody);
+   return table;
+ }
 
 function makeFieldsTable(arr) {
   if (!Array.isArray(arr) || !arr.length) return createCodeBlock('-- no value provided --');

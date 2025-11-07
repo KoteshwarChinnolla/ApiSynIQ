@@ -16,16 +16,18 @@ public class SynIqDataService {
     private EmbeddingService embeddingService;
 
     public SynIqData save(SynIqData data) {
+        System.out.println(data);
         if (data.getDescription() != null) {
             data.setDescriptionEmbedding(
                     embeddingService.generateEmbedding(data.getDescription()));
         }
+        System.out.println("First step passes");
 
         if (data.getReturnDescription() != null) {
             data.setReturnDescriptionEmbedding(
                     embeddingService.generateEmbedding(data.getReturnDescription()));
         }
-
+        System.out.println("second step passes");
         return repository.save(data);
     }
 }

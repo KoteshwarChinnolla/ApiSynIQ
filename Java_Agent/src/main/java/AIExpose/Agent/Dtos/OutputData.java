@@ -2,6 +2,7 @@ package AIExpose.Agent.Dtos;
 
 import java.util.*;
 
+import AIExpose.Agent.enums.ParamType;
 import lombok.*;
 
 @AllArgsConstructor
@@ -23,4 +24,5 @@ public class OutputData {
   private String outputBody;
   private List<String> filteringTags = new ArrayList<>();
   private Map<String, DtoSchema> dtoSchemas = new HashMap<>();
+  private Map<String, DescribeDto> describeDtosForParms = new HashMap<>();
 }

@@ -10,6 +10,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.web.bind.annotation.*;
 
 import java.lang.reflect.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class DescribeSchemaGenerator {
 
@@ -17,7 +21,7 @@ public class DescribeSchemaGenerator {
      * Generates a map of described schemas based on the method parameters
      * and provided ParamType (PATH_PARAM, REQUEST_PARAM, etc.).
      */
-    public static InputsDto generateDescribeSchema(Method method) throws JsonProcessingException {
+    public static InputsDto generateDescribeSchema(Method method, Map<String, DescribeDto> describeDtosForParms) throws JsonProcessingException {
         InputsDto inputsDto = new InputsDto();
         ObjectMapper mapper = new ObjectMapper();
         AIExposeEpHttp aiExposeEpHttp = method.getAnnotation(AIExposeEpHttp.class) != null
@@ -33,7 +37,8 @@ public class DescribeSchemaGenerator {
                 PathVariable pv = parameter.getAnnotation(PathVariable.class);
                 String name = !pv.value().isEmpty() ? pv.value() : paramName;
                 DescribeDto pathParams = getDescribedParams(parameter, aiExposeEpHttp, ParamType.PATH_PARAM);
-                inputsDto.getInputPathParams().put(name, mapper.writeValueAsString(pathParams));
+                describeDtosForParms.put(name, pathParams);
+                inputsDto.getInputPathParams().put(name, parameter.getType().getName());
             }
 
             // ✅ REQUEST PARAMETER
@@ -41,7 +46,8 @@ public class DescribeSchemaGenerator {
                 RequestParam rp = parameter.getAnnotation(RequestParam.class);
                 String name = !rp.value().isEmpty() ? rp.value() : paramName;
                 DescribeDto reqParams = getDescribedParams(parameter, aiExposeEpHttp, ParamType.REQUEST_PARAM);
-                inputsDto.getInputQueryParams().put(name, mapper.writeValueAsString(reqParams));
+                describeDtosForParms.put(name,reqParams);
+                inputsDto.getInputQueryParams().put(name, parameter.getType().getName());
             }
 
             // ✅ REQUEST BODY
@@ -57,7 +63,9 @@ public class DescribeSchemaGenerator {
                 RequestHeader rh = parameter.getAnnotation(RequestHeader.class);
                 String name = !rh.value().isEmpty() ? rh.value() : paramName;
                 DescribeDto headerParams = getDescribedParams(parameter, aiExposeEpHttp, ParamType.REQUEST_HEADER);
-                inputsDto.getInputHeaders().put(name, mapper.writeValueAsString(headerParams));
+                describeDtosForParms.put(name,headerParams);
+
+                inputsDto.getInputHeaders().put(name,  parameter.getType().getName());
             }
 
             // ✅ VARIABLE (UNANNOTATED PARAMETERS, CUSTOM DTOS)
@@ -67,7 +75,10 @@ public class DescribeSchemaGenerator {
                     !parameter.isAnnotationPresent(RequestHeader.class)) {
 
                 if (ParamSchemaGenerator.isSimpleType(paramType)) {
-                    inputsDto.getInputVariables().put(paramName, mapper.writeValueAsString(paramsToDescribe(parameter, ParamType.VARIABLE)));
+
+                    DescribeDto d = paramsToDescribe(parameter, ParamType.VARIABLE);
+                    describeDtosForParms.put(paramName,d);
+                    inputsDto.getInputVariables().put(paramName, paramName);
                 } else {
                     // Store only reference, details can be resolved by DTOCollector
                     inputsDto.getInputVariables().put(paramName, paramType.getSimpleName());
@@ -95,7 +106,7 @@ public class DescribeSchemaGenerator {
         };
 
         for( Describe d : annotationArr) {
-            if (d.name() == type.name()) {
+            if (d.name().equals(parameter.getName())) {
                 return annotationToDescribe(d);
             }
         } 
