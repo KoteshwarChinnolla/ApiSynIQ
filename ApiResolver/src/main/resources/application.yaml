@@ -21,11 +21,11 @@ spring:
       embedding:
         options:
 #          model: nomic-embed-text
-           model: all-minilm
+           model: nomic-embed-text
     vectorstore:
       pgvector:
         initialize-schema: true
-        dimensions: 1536
+        dimensions: 768
         index-type: hnsw
         schema-validation: true
   datasource:
@@ -38,4 +38,4 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: update
+      ddl-auto: create

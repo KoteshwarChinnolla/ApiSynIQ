@@ -50,7 +50,6 @@ class InputData:
     describeDtosForParms: Dict[str, DescribeDto] = field(default_factory=dict)
 
 
-# --- Exact instance matching your JSON ---
 example = InputData(
     name="Details",
     endpoint="advanced/employee/primary/{employeeName}",

@@ -21,13 +21,11 @@ public class SynIqDataService {
             data.setDescriptionEmbedding(
                     embeddingService.generateEmbedding(data.getDescription()));
         }
-        System.out.println("First step passes");
 
         if (data.getReturnDescription() != null) {
             data.setReturnDescriptionEmbedding(
                     embeddingService.generateEmbedding(data.getReturnDescription()));
         }
-        System.out.println("second step passes");
         return repository.save(data);
     }
 }

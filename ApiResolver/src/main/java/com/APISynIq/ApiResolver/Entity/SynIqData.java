@@ -63,10 +63,10 @@ public class SynIqData {
   private Map<String, DescribeDtoEntity> describeDtosForParms = new HashMap<>();
 
 
-  @Column(columnDefinition = "vector(1536)")
+  @Column(columnDefinition = "vector(768)")
   private float[] descriptionEmbedding;
 
-  @Column(columnDefinition = "vector(1536)")
+  @Column(columnDefinition = "vector(768)")
   private float[] returnDescriptionEmbedding;
 
   public InputData toGrpcInputData() {
