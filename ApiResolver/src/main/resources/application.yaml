@@ -7,21 +7,23 @@ server:
   port: 7321
 
 spring:
+  import:
+    optional:
+      file: .env[.properties]
   application:
     name: ApiResolver
   ai:
     ollama:
-      base-url: http://localhost:11434
+      base-url: ${OLLAMA_SERVER:http://localhost:11434}
       init:
         pull-model-strategy: when_missing
-        timeout: 10s
+        timeout: ${TIME_OUT:10000}
       chat:
         options:
-          model: tinydolphin
+          model: ${CHAT_MODEL:tinydolphin}
       embedding:
         options:
-#          model: nomic-embed-text
-           model: nomic-embed-text
+           model: ${EMBEDDINGS_MODEL:nomic-embed-text}
     vectorstore:
       pgvector:
         initialize-schema: true
@@ -29,13 +31,13 @@ spring:
         index-type: hnsw
         schema-validation: true
   datasource:
-    url: jdbc:postgresql://localhost:5432/apis
-    username: postgres
-    password: koti21
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/spring}
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:koti21}
     driver-class-name: org.postgresql.Driver
   jpa:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: create
+      ddl-auto: ${HIBERNATE_AUTO:update}

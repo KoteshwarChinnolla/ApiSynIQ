@@ -54,7 +54,6 @@ public class DescribeSchemaGenerator {
             else if (parameter.isAnnotationPresent(RequestBody.class)) {
                 Type genericType = parameter.getParameterizedType();
                 Object describedType = TypeResolver.describeType(genericType);
-
                 inputsDto.getInputBody().put("requestBody", mapper.writeValueAsString(describedType));
             }
 
@@ -141,7 +140,6 @@ public class DescribeSchemaGenerator {
         dto.setOptions(describe.options());
         dto.setAutoExecute(describe.autoExecute());
         dto.setExample(describe.example());
-
         return dto;
     }
 }

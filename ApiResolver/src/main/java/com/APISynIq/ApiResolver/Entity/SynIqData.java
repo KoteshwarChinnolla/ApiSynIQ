@@ -1,10 +1,17 @@
 package com.APISynIq.ApiResolver.Entity;
 
+import com.apisyniq.grpc.DescribeDto;
+import com.apisyniq.grpc.DtoSchema;
+import com.apisyniq.grpc.InputsDto;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.*;
 
 import com.apisyniq.grpc.InputData;
+import org.hibernate.annotations.Array;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Data
 @NoArgsConstructor
@@ -62,12 +69,53 @@ public class SynIqData {
   @MapKeyColumn(name = "key_name")
   private Map<String, DescribeDtoEntity> describeDtosForParms = new HashMap<>();
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "input_description_embedding_id")
+    @JsonIgnore
+    private DescriptionEmbeddingEntity inputDescriptionEmbedding;
 
-  @Column(columnDefinition = "vector(768)")
-  private float[] descriptionEmbedding;
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "return_description_embedding_id")
+    @JsonIgnore
+    private DescriptionEmbeddingEntity returnDescriptionEmbedding;
 
-  @Column(columnDefinition = "vector(768)")
-  private float[] returnDescriptionEmbedding;
+    public void grpcToEntity(InputData inputData){
+        this.name = inputData.getName();
+        this.endpoint = inputData.getEndpoint();
+        this.httpMethod = inputData.getHttpMethod();
+        this.description = inputData.getDescription();
+        this.returnDescription = inputData.getReturnDescription();
+        this.autoExecute = inputData.getAutoExecute();
+        InputsDtoEntity inputsDtoEntity = new InputsDtoEntity();
+        inputsDtoEntity.grpcToEntity(inputData.getInputsDescribe());
+        this.inputsDescribe = inputsDtoEntity;
+        InputsDtoEntity inputsEntity = new InputsDtoEntity();
+        inputsEntity.grpcToEntity(inputData.getInputs());
+        this.inputs = inputsEntity;
+        this.outputBody =  inputData.getOutputBody();
+        this.responseBody =  inputData.getResponseBody();
+        this.tags = inputData.getTagsList();
+        Map<String, DtoSchemaEntity> entityOfDtoSchemas = new HashMap<>();
+        Map<String, DtoSchema> dtoSchemas = inputData.getDtoSchemasMap();
+        for(String key:dtoSchemas.keySet()){
+            DtoSchemaEntity dtoSchemaEntity = new DtoSchemaEntity();
+            DtoSchema value = dtoSchemas.get(key);
+            dtoSchemaEntity.grpcToEntity(value);
+            entityOfDtoSchemas.put(key, dtoSchemaEntity);
+        }
+        this.dtoSchemas = entityOfDtoSchemas;
+        Map<String, DescribeDtoEntity> entityOfDescribeDtos = new HashMap<>();
+        Map<String, DescribeDto> grpcDescribeDto = inputData.getDescribeDtosForParmsMap();
+        for(String key:grpcDescribeDto.keySet()){
+            DescribeDtoEntity describeDtoEntity = new DescribeDtoEntity();
+            DescribeDto value  = grpcDescribeDto.get(key);
+            describeDtoEntity.grpcToEntity(value);
+            entityOfDescribeDtos.put(key, describeDtoEntity);
+        }
+        this.describeDtosForParms = entityOfDescribeDtos;
+        this.filteringTags = inputData.getFilteringTagsList();
+
+    }
 
   public InputData toGrpcInputData() {
     InputData.Builder builder = InputData.newBuilder()

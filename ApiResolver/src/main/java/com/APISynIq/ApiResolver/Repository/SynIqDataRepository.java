@@ -12,7 +12,6 @@ import java.util.List;
 
 @Repository
 public interface SynIqDataRepository extends JpaRepository<SynIqData, Long>  {
-    @Query(value = "SELECT * FROM syniq_data ORDER BY description_embedding <-> CAST(:embedding AS vector) LIMIT 1", nativeQuery = true)
-    List<SynIqData> findTop5ByEmbeddingSimilarity(@Param("embedding") float[] embedding);
-
+    @Query(value = "SELECT * FROM syniq_data WHERE description_embedding_id IN (:ids)", nativeQuery = true)
+    List<SynIqData> findAllByEmbeddingIds(@Param("ids") List<Long> ids);
 }

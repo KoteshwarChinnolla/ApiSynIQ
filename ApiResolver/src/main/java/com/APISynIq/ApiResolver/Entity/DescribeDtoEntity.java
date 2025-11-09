@@ -24,6 +24,16 @@ public class DescribeDtoEntity {
   private boolean autoExecute;
   private String example;
 
+  public void grpcToEntity(DescribeDto describeDto) {
+      this.name = describeDto.getName();
+      this.description = describeDto.getDescription();
+      this.dataType = describeDto.getDataType();
+      this.defaultValue = describeDto.getDefaultValue();
+      this.options = describeDto.getOptions();
+      this.autoExecute = describeDto.getAutoExecute();
+      this.example = describeDto.getExample();
+      this.autoExecute = describeDto.getAutoExecute();
+  }
 
   public DescribeDto toGrpcDescribeDto() {
     com.apisyniq.grpc.DescribeDto.Builder builder = com.apisyniq.grpc.DescribeDto.newBuilder()

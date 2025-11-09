@@ -79,6 +79,15 @@ public class InputsDtoEntity {
     @Column(name = "value")
     private Map<String, String> inputCookies;
 
+    public void grpcToEntity(InputsDto inputsDto){
+        this.inputBody = inputsDto.getInputBodyMap();
+        this.inputPathParams = inputsDto.getInputPathParamsMap();
+        this.inputQueryParams = inputsDto.getInputQueryParamsMap();
+        this.inputVariables = inputsDto.getInputVariablesMap();
+        this.inputHeaders = inputsDto.getInputHeadersMap();
+        this.inputCookies = inputsDto.getInputCookiesMap();
+    }
+
   public InputsDto toGrpcInputsDto() {
     InputsDto.Builder builder = InputsDto.newBuilder();
     builder.putAllInputBody(inputBody)
