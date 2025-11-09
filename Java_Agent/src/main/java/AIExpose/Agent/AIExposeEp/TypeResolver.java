@@ -1,11 +1,11 @@
-package AIExpose.Agent.Utils;
+package AIExpose.Agent.AIExposeEp;
 
 import java.lang.reflect.*;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.*;
+import java.util.*;
 
+//import AIExpose.Agent.Utils.ParamSchemaGenerator;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -23,7 +23,7 @@ public class TypeResolver {
 
         // Case 2: Non-generic direct class (e.g. SampleDto1)
         if (!(method.getGenericReturnType() instanceof ParameterizedType
-                || ParamSchemaGenerator.isSimpleType(method.getReturnType()))) {
+                || TypeResolver.isSimpleType(method.getReturnType()))) {
             return method.getReturnType();
         }
 
@@ -54,7 +54,7 @@ public class TypeResolver {
 
         if (type instanceof ParameterizedType) {
             ParameterizedType paramType = (ParameterizedType) type;
-            if (ParamSchemaGenerator.isSimpleType((Class<?>) paramType.getRawType())) {
+            if (TypeResolver.isSimpleType((Class<?>) paramType.getRawType())) {
                 System.out.println("actualTypeArg: " + paramType.getRawType());
                 return (Class<?>) paramType.getRawType();
             }
@@ -114,6 +114,66 @@ public class TypeResolver {
         else {
             return type.getTypeName();
         }
+    }
+
+
+    public static boolean isSimpleType(Class<?> type) {
+        return type.isPrimitive()
+                // ✅ Primitive wrappers and strings
+                || type == String.class
+                || type == Boolean.class
+                || type == Character.class
+                || Number.class.isAssignableFrom(type)
+                || type == Integer.class
+                || type == Long.class
+                || type == Double.class
+                || type == Float.class
+                || type == Short.class
+                || type == Byte.class
+
+                // ✅ Java Time API
+                || type == java.util.Date.class
+                || type == java.sql.Date.class
+                || type == java.sql.Timestamp.class
+                || type == LocalDate.class
+                || type == LocalDateTime.class
+                || type == LocalTime.class
+                || type == OffsetDateTime.class
+                || type == OffsetTime.class
+                || type == ZonedDateTime.class
+                || type == Instant.class
+                || type == Duration.class
+                || type == Period.class
+
+                // ✅ Common utility / identifier types
+                || type == java.util.UUID.class
+                || type == java.net.URI.class
+                || type == java.net.URL.class
+                || type == java.net.InetAddress.class
+                || type == java.util.Locale.class
+                || type == java.util.Currency.class
+
+                // ✅ Big Numbers
+                || type == java.math.BigDecimal.class
+                || type == java.math.BigInteger.class
+
+                // ✅ Optional (treat as simple — unwrapped separately if needed)
+                || type == java.util.Optional.class
+
+                // ✅ Enum types
+                || type.isEnum()
+                || type == HttpStatusCode.class
+                || type.getPackageName().startsWith("java.");
+    }
+
+    public static boolean isSimpleTypeFromType(Type type) {
+        return type instanceof Class<?> clazz && isSimpleType(clazz);
+    }
+
+    public static String getTypeName(Type type) {
+        if (type instanceof Class<?> clazz)
+            return clazz.getSimpleName();
+        return type.getTypeName();
     }
 
 }

@@ -1,13 +1,19 @@
 package AIExpose.Agent.AIExposeDto;
 
 
+import AIExpose.Agent.AIExposeEp.DTOCollector;
+import AIExpose.Agent.AIExposeEp.TypeResolver;
 import AIExpose.Agent.Annotations.*;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import org.springframework.stereotype.Component;
 
 import AIExpose.Agent.Dtos.*;
-import AIExpose.Agent.Utils.ParamSchemaGenerator;
+//import AIExpose.Agent.Utils.ParamSchemaGenerator;
 
 
 @Component
@@ -16,7 +22,7 @@ public class AIExposeDtoAspect {
         DtoSchema dtoSchema = new DtoSchema();
         dtoSchema.setClassName(clazz.getName());
         // System.out.println("Scanning Class: " + clazz.getName());
-        if(ParamSchemaGenerator.isSimpleType(clazz)){
+        if(TypeResolver.isSimpleType(clazz)){
             dtoSchema.setDescription(null);
             return dtoSchema;
         }
@@ -53,5 +59,14 @@ public class AIExposeDtoAspect {
             dtoSchema.getFields().add(describe);
         }
         return dtoSchema;
+    }
+    public static Map<String, DtoSchema> DescribedDtosForMethods(Method method) {
+        Map<String, Class<?>> visited = DTOCollector.collectDTOsForMethod(method);
+        Map<String, DtoSchema> describedDtos = new LinkedHashMap<>();
+        for (String key : new ArrayList<>(visited.keySet())) {
+            Class<?> clazz = visited.get(key);
+            describedDtos.put(key, AIExposeDtoAspect.scan(clazz));
+        }
+        return describedDtos;
     }
 }

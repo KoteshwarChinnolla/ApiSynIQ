@@ -4,8 +4,13 @@ import java.lang.reflect.*;
 import java.util.*;
 
 
+import AIExpose.Agent.ParamScanner.Actual;
+import AIExpose.Agent.ParamScanner.Factory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,11 +23,8 @@ import AIExpose.Agent.Dtos.DtoSchema;
 import AIExpose.Agent.Dtos.InputsDto;
 import AIExpose.Agent.Dtos.OutputData;
 import AIExpose.Agent.Annotations.*;
-import AIExpose.Agent.Utils.DTOCollector;
-import AIExpose.Agent.Utils.DescribeSchemaGenerator;
-import AIExpose.Agent.Utils.EndpointBuilder;
-import AIExpose.Agent.Utils.ParamSchemaGenerator;
-import AIExpose.Agent.Utils.TypeResolver;
+//import AIExpose.Agent.Utils.DescribeSchemaGenerator;
+//import AIExpose.Agent.Utils.ParamSchemaGenerator;
 import AIExpose.Agent.enums.ParamType;
 
 
@@ -75,18 +77,23 @@ public class EndpointScanner {
             controllerSchema.setResponseBody(String.valueOf(TypeResolver.describeType(TypeResolver.resolveActualReturnType(method))));
             controllerSchema.setReturnDescription(returnDescription);
         }
-        Object outputBody = ParamSchemaGenerator.generateClassSchema(TypeResolver.resolveActualReturnType(method), new HashMap<>(), 0);
-        ObjectMapper mapper = new ObjectMapper();
-        controllerSchema.setOutputBody(mapper.writeValueAsString(outputBody));
-        InputsDto inputs = ParamSchemaGenerator.generateMethodParamSchema(method);
+        Object outputBody = Actual.generateClassSchema(TypeResolver.resolveActualReturnType(method), new HashMap<>(), 0);
+        ObjectMapper mapper = JsonMapper.builder()
+                .addModule(new JavaTimeModule())
+                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .build();
         Map<String, DescribeDto> describeDtosForParms = new HashMap<>();
-        InputsDto inputsDescribe = DescribeSchemaGenerator.generateDescribeSchema(method, describeDtosForParms);
+        Map<String, InputsDto> inputsMap = Factory.generateCombinedSchema(method, describeDtosForParms);
+        controllerSchema.setOutputBody(mapper.writeValueAsString(outputBody));
+//        InputsDto inputs = ParamSchemaGenerator.generateMethodParamSchema(method);
+        InputsDto inputs = inputsMap.get("actual");
+        InputsDto inputsDescribe = inputsMap.get("describe");
+//        InputsDto inputsDescribe = DescribeSchemaGenerator.generateDescribeSchema(method, describeDtosForParms);
         controllerSchema.setDescribeDtosForParms(describeDtosForParms);
         controllerSchema.setInputsDescribe(inputsDescribe);
         controllerSchema.setInputs(inputs);
         controllerSchema.setFilteringTags(filteringTags);
-        controllerSchema.setDtoSchemas(DTOCollector.DescribedDtosForMethods(method));
-
+        controllerSchema.setDtoSchemas(AIExposeDtoAspect.DescribedDtosForMethods(method));
         return controllerSchema;
     }
 

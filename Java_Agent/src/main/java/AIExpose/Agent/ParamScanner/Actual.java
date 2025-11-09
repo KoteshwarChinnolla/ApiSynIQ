@@ -1,78 +1,24 @@
-package AIExpose.Agent.Utils;
+package AIExpose.Agent.ParamScanner;
 
-import java.lang.reflect.*;
+import AIExpose.Agent.AIExposeEp.TypeResolver;
+import AIExpose.Agent.Annotations.AIExposeEpHttp;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.time.*;
 import java.util.*;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.http.HttpStatusCode;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import AIExpose.Agent.Dtos.InputsDto;
-
-public class ParamSchemaGenerator {
-
-    public static InputsDto generateMethodParamSchema(Method method) throws JsonProcessingException {
-        InputsDto inputsDto = new InputsDto();
-        ObjectMapper mapper = new ObjectMapper();
-
-        for (Parameter parameter : method.getParameters()) {
-            Class<?> paramType = parameter.getType();
-            Type paramGenericType = parameter.getParameterizedType();
-            String paramName = parameter.getName();
-
-            // ✅ PATH PARAM
-            if (parameter.isAnnotationPresent(PathVariable.class)) {
-                PathVariable pv = parameter.getAnnotation(PathVariable.class);
-                String name = !pv.value().isEmpty() ? pv.value() : paramName;
-                inputsDto.getInputPathParams().put(name, mapper.writeValueAsString(sampleValue(paramType)));
-            }
-
-            // ✅ REQUEST PARAM
-            else if (parameter.isAnnotationPresent(RequestParam.class)) {
-                RequestParam rp = parameter.getAnnotation(RequestParam.class);
-                String name = !rp.value().isEmpty() ? rp.value() : paramName;
-                inputsDto.getInputQueryParams().put(name, mapper.writeValueAsString(sampleValue(paramType)));
-            }
-
-            // ✅ REQUEST BODY
-            else if (parameter.isAnnotationPresent(RequestBody.class)) {
-                inputsDto.getInputBody().put("requestBody", mapper.writeValueAsString(generateClassSchema(paramGenericType, new HashMap<>(), 0)));
-            }
-
-            // ✅ REQUEST HEADER
-            else if (parameter.isAnnotationPresent(RequestHeader.class)) {
-                RequestHeader rh = parameter.getAnnotation(RequestHeader.class);
-                String name = !rh.value().isEmpty() ? rh.value() : paramName;
-                inputsDto.getInputHeaders().put(name, mapper.writeValueAsString(sampleValue(paramType)));
-            }
-
-            // ✅ VARIABLE / DTO PARAM
-            else if (!parameter.isAnnotationPresent(RequestBody.class)
-                    && !parameter.isAnnotationPresent(PathVariable.class)
-                    && !parameter.isAnnotationPresent(RequestParam.class)
-                    && !parameter.isAnnotationPresent(RequestHeader.class)) {
-
-                if (isSimpleType(paramType)) {
-                    inputsDto.getInputVariables().put(paramName, mapper.writeValueAsString(sampleValue(paramType)));
-                } else {
-                    inputsDto.getInputVariables().put(paramName, mapper.writeValueAsString(generateClassSchema(paramGenericType, new HashMap<>(), 0)));
-                }
-            }
-        }
-        return inputsDto; 
-    }
-
-    // 🔁 Recursive Class Schema Generator
+public class Actual extends Factory {
     public static Object generateClassSchema(Type type, Map<String, Object> vis, int depth) {
         // 1. Prevent infinite recursion
         if (depth > 10)
             return "too_deep";
 
         // 2. Prevent revisiting the same type (cyclic reference)
-        String typeName = getTypeName(type);
+        String typeName = TypeResolver.getTypeName(type);
         if (vis.containsKey(typeName)) {
             return vis.get(typeName);
         }
@@ -82,7 +28,7 @@ public class ParamSchemaGenerator {
         if (type instanceof Class<?> clazz) {
 
             // Simple types
-            if (isSimpleType(clazz)) {
+            if (TypeResolver.isSimpleType(clazz)) {
                 Object sample = sampleValue(clazz);
                 vis.put(typeName, sample);
                 return sample;
@@ -145,7 +91,7 @@ public class ParamSchemaGenerator {
 
                     Map<Object, Object> mapSchema = new LinkedHashMap<>();
                     mapSchema.put(
-                            isSimpleTypeFromType(keyType) ? getTypeName(keyType) : keySchema,
+                            TypeResolver.isSimpleTypeFromType(keyType) ? TypeResolver.getTypeName(keyType) : keySchema,
                             valueSchema);
 
                     vis.put(typeName, mapSchema);
@@ -177,66 +123,7 @@ public class ParamSchemaGenerator {
         return schema;
     }
 
-    public static boolean isSimpleType(Class<?> type) {
-        return type.isPrimitive()
-                // ✅ Primitive wrappers and strings
-                || type == String.class
-                || type == Boolean.class
-                || type == Character.class
-                || Number.class.isAssignableFrom(type)
-                || type == Integer.class
-                || type == Long.class
-                || type == Double.class
-                || type == Float.class
-                || type == Short.class
-                || type == Byte.class
-
-                // ✅ Java Time API
-                || type == java.util.Date.class
-                || type == java.sql.Date.class
-                || type == java.sql.Timestamp.class
-                || type == LocalDate.class
-                || type == LocalDateTime.class
-                || type == LocalTime.class
-                || type == OffsetDateTime.class
-                || type == OffsetTime.class
-                || type == ZonedDateTime.class
-                || type == Instant.class
-                || type == Duration.class
-                || type == Period.class
-
-                // ✅ Common utility / identifier types
-                || type == java.util.UUID.class
-                || type == java.net.URI.class
-                || type == java.net.URL.class
-                || type == java.net.InetAddress.class
-                || type == java.util.Locale.class
-                || type == java.util.Currency.class
-
-                // ✅ Big Numbers
-                || type == java.math.BigDecimal.class
-                || type == java.math.BigInteger.class
-
-                // ✅ Optional (treat as simple — unwrapped separately if needed)
-                || type == java.util.Optional.class
-
-                // ✅ Enum types
-                || type.isEnum()
-                || type == HttpStatusCode.class
-                || type.getPackageName().startsWith("java.");
-    }
-
-    private static boolean isSimpleTypeFromType(Type type) {
-        return type instanceof Class<?> clazz && isSimpleType(clazz);
-    }
-
-    private static String getTypeName(Type type) {
-        if (type instanceof Class<?> clazz)
-            return clazz.getSimpleName();
-        return type.getTypeName();
-    }
-
-    private static Object sampleValue(Class<?> type) {
+    protected static Object sampleValue(Class<?> type) {
         if (type == String.class)
             return "String";
         if (type == int.class || type == Integer.class)

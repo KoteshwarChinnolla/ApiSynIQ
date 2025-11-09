@@ -1,11 +1,9 @@
-package AIExpose.Agent.Utils;
+package AIExpose.Agent.AIExposeEp;
 
 
 import java.lang.reflect.*;
 import java.util.*;
-
-import AIExpose.Agent.AIExposeDto.AIExposeDtoAspect;
-import AIExpose.Agent.Dtos.DtoSchema;
+//import AIExpose.Agent.Utils.ParamSchemaGenerator;
 
 public class DTOCollector {
 
@@ -17,7 +15,7 @@ public class DTOCollector {
         depth++;
 
         if (type instanceof Class<?> clazz) {
-            if (ParamSchemaGenerator.isSimpleType(clazz)) return visited;
+            if (TypeResolver.isSimpleType(clazz)) return visited;
 
             if (!visited.containsKey(typeName)) {
                 visited.put(clazz.getSimpleName(), clazz);
@@ -72,15 +70,5 @@ public class DTOCollector {
         }
         collectDTOs(method.getGenericReturnType(), visited, 0);
         return visited;
-    }
-
-    public static Map<String, DtoSchema> DescribedDtosForMethods(Method method) {
-        Map<String, Class<?>> visited = collectDTOsForMethod(method);
-        Map<String, DtoSchema> describedDtos = new LinkedHashMap<>();
-        for (String key : new ArrayList<>(visited.keySet())) {
-            Class<?> clazz = visited.get(key);
-            describedDtos.put(key, AIExposeDtoAspect.scan(clazz));
-        }
-        return describedDtos;
     }
 }

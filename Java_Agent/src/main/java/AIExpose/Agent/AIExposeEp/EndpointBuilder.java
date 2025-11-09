@@ -1,4 +1,4 @@
-package AIExpose.Agent.Utils;
+package AIExpose.Agent.AIExposeEp;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.core.env.Environment;

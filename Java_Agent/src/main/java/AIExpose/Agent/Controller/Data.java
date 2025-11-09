@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -21,10 +22,15 @@ import org.springframework.web.bind.annotation.*;
 
 @Controller
 public class Data {
-  @Autowired
-  private ApplicationContext applicationContext;
-  @Autowired
-  private EndpointScanner endpointScanner;
+    private final ApplicationContext applicationContext;
+    private final EndpointScanner endpointScanner;
+
+    @Autowired
+    public Data(ApplicationContext applicationContext,
+                EndpointScanner endpointScanner) {
+        this.applicationContext = applicationContext;
+        this.endpointScanner = endpointScanner;
+    }
 
     @RequestMapping("/endpoints-info")
     @ResponseBody
