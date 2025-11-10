@@ -2,8 +2,7 @@ package AIExpose.Agent.Controller;
 
 import AIExpose.Agent.AIExposeEp.EndpointScanner;
 import AIExpose.Agent.Annotations.*;
-import AIExpose.Agent.Dtos.ControllerSchema;
-import AIExpose.Agent.Dtos.OutputData;
+import AIExpose.Agent.Dtos.EndpointData;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -34,8 +33,8 @@ public class Data {
 
     @RequestMapping("/endpoints-info")
     @ResponseBody
-    public Map<String, List<Map<String, OutputData>>> getEndpointsInformation() throws JsonProcessingException {
-        Map<String, List<Map<String, OutputData>>> groupedEndpoints = new HashMap<>();
+    public Map<String, List<Map<String, EndpointData>>> getEndpointsInformation() throws JsonProcessingException {
+        Map<String, List<Map<String, EndpointData>>> groupedEndpoints = new HashMap<>();
         String[] beanNames = applicationContext.getBeanDefinitionNames();
 
         for (String beanName : beanNames) {
@@ -45,13 +44,13 @@ public class Data {
 
             if (RestControllerAnnotation != null) {
                 String controllerName = bean.getClass().getSimpleName();
-                List<Map<String, OutputData>> endpoints = new ArrayList<>();
+                List<Map<String, EndpointData>> endpoints = new ArrayList<>();
 
                 for (Method method : bean.getClass().getDeclaredMethods()) {
                     AIExposeEpHttp epAnnotation = method.getAnnotation(AIExposeEpHttp.class);
-                    OutputData schema = endpointScanner.before(method, epAnnotation, aiExposeController);
+                    EndpointData schema = endpointScanner.before(method, epAnnotation, aiExposeController);
 
-                    Map<String, OutputData> entityMap = new HashMap<>();
+                    Map<String, EndpointData> entityMap = new HashMap<>();
                     entityMap.put(method.getName(), schema);
                     endpoints.add(entityMap);
                 }

@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import AIExpose.Agent.Dtos.Describe;
 import org.springframework.stereotype.Component;
 
 import AIExpose.Agent.Dtos.*;
@@ -36,9 +37,9 @@ public class AIExposeDtoAspect {
 
         for (Field field : clazz.getDeclaredFields()) {
             field.setAccessible(true);
-            DescribeDto describe = new DescribeDto();
-            if (field.isAnnotationPresent(Describe.class)) {
-                Describe aiExposeVal = field.getAnnotation(Describe.class);
+            Describe describe = new Describe();
+            if (field.isAnnotationPresent(AIExpose.Agent.Annotations.Describe.class)) {
+                AIExpose.Agent.Annotations.Describe aiExposeVal = field.getAnnotation(AIExpose.Agent.Annotations.Describe.class);
                 describe.setName(aiExposeVal.name()!=""? aiExposeVal.name() : field.getName());
                 describe.setDescription(aiExposeVal.description()!=""? aiExposeVal.description() : "No description provided.");
                 describe.setDataType(field.getType().getSimpleName());

@@ -7,7 +7,7 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class InputsDto {
+public class Inputs {
   private Map<String, String> inputBody = new HashMap<>();
   private Map<String, String> inputPathParams = new HashMap<>();
   private Map<String, String> inputQueryParams = new HashMap<>();

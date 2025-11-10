@@ -1,13 +1,12 @@
 package AIExpose.Agent.ParamScanner;
 
 import AIExpose.Agent.Annotations.AIExposeEpHttp;
-import AIExpose.Agent.Dtos.DescribeDto;
 import AIExpose.Agent.enums.ParamType;
 
 import java.lang.reflect.Parameter;
 
 public class Describe extends Factory {
-    protected static DescribeDto getDescribedParams(Parameter parameter, AIExposeEpHttp aiExposeEpHttp, ParamType type) {
+    protected static AIExpose.Agent.Dtos.Describe getDescribedParams(Parameter parameter, AIExposeEpHttp aiExposeEpHttp, ParamType type) {
         if (aiExposeEpHttp == null) {
             return paramsToDescribe(parameter, type);
         }
@@ -30,11 +29,11 @@ public class Describe extends Factory {
     }
 
     /**
-     * Generates DescribeDto list from method parameters.
+     * Generates Describe list from method parameters.
      */
-    public static DescribeDto paramsToDescribe(Parameter parameter, ParamType type) {
+    public static AIExpose.Agent.Dtos.Describe paramsToDescribe(Parameter parameter, ParamType type) {
 
-        DescribeDto describe = new DescribeDto();
+        AIExpose.Agent.Dtos.Describe describe = new AIExpose.Agent.Dtos.Describe();
         describe.setName(parameter.getName());
         describe.setDataType(parameter.getType().getSimpleName());
         describe.setAutoExecute(true);
@@ -44,10 +43,10 @@ public class Describe extends Factory {
     }
 
     /**
-     * Converts @Describe annotations into DescribeDto objects.
+     * Converts @Describe annotations into Describe objects.
      */
-    public static DescribeDto annotationToDescribe(AIExpose.Agent.Annotations.Describe describe) {
-        DescribeDto dto = new DescribeDto();
+    public static AIExpose.Agent.Dtos.Describe annotationToDescribe(AIExpose.Agent.Annotations.Describe describe) {
+        AIExpose.Agent.Dtos.Describe dto = new AIExpose.Agent.Dtos.Describe();
         dto.setName(describe.name());
         dto.setDescription(describe.description());
         dto.setDataType(describe.dataType());

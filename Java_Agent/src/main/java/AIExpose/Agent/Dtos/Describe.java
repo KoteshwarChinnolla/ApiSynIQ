@@ -6,7 +6,7 @@ import lombok.*;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class DescribeDto {
+public class Describe {
   private String name = "";
   private String description = "No description provided.";
   private String dataType = "String";

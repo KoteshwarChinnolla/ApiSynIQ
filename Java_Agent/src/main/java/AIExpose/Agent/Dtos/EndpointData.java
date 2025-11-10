@@ -2,7 +2,6 @@ package AIExpose.Agent.Dtos;
 
 import java.util.*;
 
-import AIExpose.Agent.enums.ParamType;
 import lombok.*;
 
 @AllArgsConstructor
@@ -10,19 +9,20 @@ import lombok.*;
 @Getter
 @Setter
 @ToString
-public class OutputData {
+public class EndpointData {
   private String name = "";
   private String endpoint = "";
   private String httpMethod = "GET";
   private String[] tags = new String[]{};
   private String description = "No description provided.";
   private String returnDescription = "No return description provided.";
-  private InputsDto inputsDescribe;
+  private Inputs inputsDescribe;
   private String responseBody = null;
   private boolean autoExecute = true;
-  private InputsDto inputs;
+  private Inputs inputs;
   private String outputBody;
   private List<String> filteringTags = new ArrayList<>();
   private Map<String, DtoSchema> dtoSchemas = new HashMap<>();
-  private Map<String, DescribeDto> describeDtosForParms = new HashMap<>();
+  private Map<String, Describe> describeDtosForParms = new HashMap<>();
+  private String globalPath = null;
 }

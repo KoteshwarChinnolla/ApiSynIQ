@@ -12,16 +12,18 @@ import lombok.*;
 @Entity
 @Builder
 @Table(name = "describe_dto")
-public class DescribeDtoEntity {
+public class DescribeFieldsEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
   private String name;
+  @Column(columnDefinition = "TEXT")
   private String description;
   private String dataType;
   private String defaultValue;
   private String options;
   private boolean autoExecute;
+  @Column(columnDefinition = "TEXT")
   private String example;
 
   public void grpcToEntity(DescribeDto describeDto) {

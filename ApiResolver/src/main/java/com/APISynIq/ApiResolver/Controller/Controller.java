@@ -1,5 +1,6 @@
 package com.APISynIq.ApiResolver.Controller;
 
+import com.apisyniq.grpc.InputsAndReturnsMatch;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -22,12 +23,18 @@ public class Controller {
 
     @PostMapping("/save")
     public String postMethodName(@RequestBody SynIqData entity) {
-        return "Data saved with ID: " + synIqDataService.save(entity.toGrpcInputData()).getId();
+        return "Data saved with ID: " + synIqDataService.save(entity.toGrpcInputData()).join().getId();
     }
 
-    @PostMapping("/search")
-    public List<SynIqData> search(@RequestBody String entity) {
-        return synIqDataService.queryModel(entity);
+    @PostMapping("/searchMatchesForBoth")
+    public InputsAndReturnsMatch search(@RequestBody String entity) {
+        return synIqDataService.queryForBoth(entity);
     }
-    
+
+    @PostMapping("/searchMatchesForInputDescrition")
+    public List<SynIqData> searchForInputDes(@RequestBody String entity) { return synIqDataService.inputsDesMatch(entity);}
+
+    @PostMapping("/searchMatchesForReturnDescription")
+    public List<SynIqData> searchForReturnDes(@RequestBody String entity) { return synIqDataService.returnDesMatch(entity);}
+
 }

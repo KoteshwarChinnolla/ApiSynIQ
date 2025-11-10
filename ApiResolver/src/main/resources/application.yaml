@@ -31,7 +31,7 @@ spring:
         index-type: hnsw
         schema-validation: true
   datasource:
-    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/spring}
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/apis}
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:koti21}
     driver-class-name: org.postgresql.Driver

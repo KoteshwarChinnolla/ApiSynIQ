@@ -12,16 +12,17 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import AIExpose.Agent.AIExposeDto.AIExposeDtoAspect;
-import AIExpose.Agent.Dtos.DescribeDto;
+import AIExpose.Agent.Dtos.Describe;
 import AIExpose.Agent.Dtos.DtoSchema;
-import AIExpose.Agent.Dtos.InputsDto;
-import AIExpose.Agent.Dtos.OutputData;
+import AIExpose.Agent.Dtos.Inputs;
+import AIExpose.Agent.Dtos.EndpointData;
 import AIExpose.Agent.Annotations.*;
 //import AIExpose.Agent.Utils.DescribeSchemaGenerator;
 //import AIExpose.Agent.Utils.ParamSchemaGenerator;
@@ -33,8 +34,10 @@ public class EndpointScanner {
 
     @Autowired
     private EndpointBuilder endpointBuilder;
+    @Value("${aiExpose.global.path:}")
+    private String globalPath;
 
-    public OutputData before(Method method, AIExposeEpHttp aiExposeEpHttp, AIExposeController aiExposeController) throws JsonProcessingException {
+    public EndpointData before(Method method, AIExposeEpHttp aiExposeEpHttp, AIExposeController aiExposeController) throws JsonProcessingException {
         String name = method.getName();
         String des = "";
         if(aiExposeController != null){
@@ -56,7 +59,7 @@ public class EndpointScanner {
         Boolean autoExecute = true;
         String returnDescription = "No return description provided.";
         // ControllerSchema controllerSchema = new ControllerSchema();
-        OutputData controllerSchema = new OutputData();
+        EndpointData controllerSchema = new EndpointData();
         if (aiExposeEpHttp != null) {
             controllerSchema.setName(!aiExposeEpHttp.name().isEmpty() ? aiExposeEpHttp.name() : name);
             controllerSchema.setEndpoint(!aiExposeEpHttp.example().isEmpty() ? aiExposeEpHttp.example() : endpoint);
@@ -82,18 +85,19 @@ public class EndpointScanner {
                 .addModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
                 .build();
-        Map<String, DescribeDto> describeDtosForParms = new HashMap<>();
-        Map<String, InputsDto> inputsMap = Factory.generateCombinedSchema(method, describeDtosForParms);
+        Map<String, AIExpose.Agent.Dtos.Describe> describeDtosForParms = new HashMap<>();
+        Map<String, Inputs> inputsMap = Factory.generateCombinedSchema(method, describeDtosForParms);
         controllerSchema.setOutputBody(mapper.writeValueAsString(outputBody));
-//        InputsDto inputs = ParamSchemaGenerator.generateMethodParamSchema(method);
-        InputsDto inputs = inputsMap.get("actual");
-        InputsDto inputsDescribe = inputsMap.get("describe");
-//        InputsDto inputsDescribe = DescribeSchemaGenerator.generateDescribeSchema(method, describeDtosForParms);
+//        Inputs inputs = ParamSchemaGenerator.generateMethodParamSchema(method);
+        Inputs inputs = inputsMap.get("actual");
+        Inputs inputsDescribe = inputsMap.get("describe");
+//        Inputs inputsDescribe = DescribeSchemaGenerator.generateDescribeSchema(method, describeDtosForParms);
         controllerSchema.setDescribeDtosForParms(describeDtosForParms);
         controllerSchema.setInputsDescribe(inputsDescribe);
         controllerSchema.setInputs(inputs);
         controllerSchema.setFilteringTags(filteringTags);
         controllerSchema.setDtoSchemas(AIExposeDtoAspect.DescribedDtosForMethods(method));
+        controllerSchema.setGlobalPath(globalPath==null?"":globalPath);
         return controllerSchema;
     }
 
@@ -112,18 +116,18 @@ public class EndpointScanner {
         return reqBodySchemas;
     }
 
-    public static List<DescribeDto> paramsToDescribe(Parameter[] params, ParamType type) {
-        List<DescribeDto> describeList = new ArrayList<>();
+    public static List<AIExpose.Agent.Dtos.Describe> paramsToDescribe(Parameter[] params, ParamType type) {
+        List<Describe> describeList = new ArrayList<>();
         for (Parameter parameter : params) {
             // skip if annotated with RequestBody or Describe
             if (parameter.isAnnotationPresent(RequestBody.class)) continue;
-            if (parameter.isAnnotationPresent(Describe.class)) continue;
+            if (parameter.isAnnotationPresent(AIExpose.Agent.Annotations.Describe.class)) continue;
 
             // only process parameters based on annotation type
             if (parameter.isAnnotationPresent(PathVariable.class) && type != ParamType.PATH_PARAM) continue;
             if (parameter.isAnnotationPresent(RequestParam.class) && type != ParamType.REQUEST_PARAM) continue;
 
-            DescribeDto describe = new DescribeDto();
+            AIExpose.Agent.Dtos.Describe describe = new Describe();
             describe.setName(parameter.getName());
             describe.setDataType(parameter.getType().getSimpleName());
             describe.setAutoExecute(true);
@@ -135,10 +139,10 @@ public class EndpointScanner {
     }
 
 
-    public static List<DescribeDto> annotationToDescribe(Describe[] pathParams) {
-        List<DescribeDto> describeList = new ArrayList<>();
-        for (Describe describe : pathParams) {
-            DescribeDto dto = new DescribeDto();
+    public static List<AIExpose.Agent.Dtos.Describe> annotationToDescribe(AIExpose.Agent.Annotations.Describe[] pathParams) {
+        List<AIExpose.Agent.Dtos.Describe> describeList = new ArrayList<>();
+        for (AIExpose.Agent.Annotations.Describe describe : pathParams) {
+            AIExpose.Agent.Dtos.Describe dto = new AIExpose.Agent.Dtos.Describe();
             dto.setName(describe.name());
             dto.setDescription(describe.description());
             dto.setDataType(describe.dataType());

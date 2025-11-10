@@ -18,19 +18,19 @@ import lombok.*;
 @Table(name = "dto_schema")
 public class DtoSchemaEntity {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
     private String className;
     private String name;
+
+    @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Column(columnDefinition = "TEXT")
     private String example;
 
     // ✅ One DtoSchemaEntity -> many DescribeDtoEntity
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinColumn(name = "dto_schema_id") // foreign key in DescribeDtoEntity
-
-    private List<DescribeDtoEntity> fields;
+    private List<DescribeFieldsEntity> fields;
 
     public void grpcToEntity(DtoSchema dtoSchema) {
         this.className = dtoSchema.getClassName();
@@ -38,11 +38,11 @@ public class DtoSchemaEntity {
         this.description = dtoSchema.getDescription();
         this.example = dtoSchema.getExample();
         List<DescribeDto> grpcDescribe = dtoSchema.getFieldsList();
-        List<DescribeDtoEntity> grpcDtoSchema = new ArrayList<>();
+        List<DescribeFieldsEntity> grpcDtoSchema = new ArrayList<>();
         for(DescribeDto describeDto : grpcDescribe){
-            DescribeDtoEntity describeDtoEntity = new DescribeDtoEntity();
-            describeDtoEntity.grpcToEntity(describeDto);
-            grpcDtoSchema.add(describeDtoEntity);
+            DescribeFieldsEntity describeFieldsEntity = new DescribeFieldsEntity();
+            describeFieldsEntity.grpcToEntity(describeDto);
+            grpcDtoSchema.add(describeFieldsEntity);
         }
         this.fields = grpcDtoSchema;
     }
@@ -54,7 +54,7 @@ public class DtoSchemaEntity {
                 .setDescription(this.description != null ? this.description : "")
                 .setExample(this.example != null ? this.example : "");
         
-        for (DescribeDtoEntity field : this.fields) {
+        for (DescribeFieldsEntity field : this.fields) {
             builder.addFields(field.toGrpcDescribeDto());
         }
         

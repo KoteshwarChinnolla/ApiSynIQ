@@ -26,7 +26,8 @@ public class InputsDtoEntity {
         joinColumns = @JoinColumn(name = "controller_input_id")
     )
     @MapKeyColumn(name = "key")
-    @Column(name = "value")
+    // @Lob
+    @Column(name = "value", columnDefinition = "TEXT")
     private Map<String, String> inputBody;
 
     // --------- 2. Path Params -------------
@@ -36,7 +37,8 @@ public class InputsDtoEntity {
         joinColumns = @JoinColumn(name = "controller_input_id")
     )
     @MapKeyColumn(name = "key")
-    @Column(name = "value")
+    // @Lob
+    @Column(name = "value", columnDefinition = "TEXT")
     private Map<String, String> inputPathParams;
 
     // --------- 3. Query Params -------------
@@ -46,7 +48,8 @@ public class InputsDtoEntity {
         joinColumns = @JoinColumn(name = "controller_input_id")
     )
     @MapKeyColumn(name = "key")
-    @Column(name = "value")
+    // @Lob
+    @Column(name = "value", columnDefinition = "TEXT")
     private Map<String, String> inputQueryParams;
 
     // --------- 4. Variables -------------
@@ -56,7 +59,8 @@ public class InputsDtoEntity {
         joinColumns = @JoinColumn(name = "controller_input_id")
     )
     @MapKeyColumn(name = "key")
-    @Column(name = "value")
+    // @Lob
+    @Column(name = "value", columnDefinition = "TEXT")
     private Map<String, String> inputVariables;
 
     // --------- 5. Headers -------------
@@ -66,7 +70,8 @@ public class InputsDtoEntity {
         joinColumns = @JoinColumn(name = "controller_input_id")
     )
     @MapKeyColumn(name = "key")
-    @Column(name = "value")
+    // @Lob
+    @Column(name = "value", columnDefinition = "TEXT")
     private Map<String, String> inputHeaders;
 
     // --------- 6. Cookies -------------
@@ -76,7 +81,8 @@ public class InputsDtoEntity {
         joinColumns = @JoinColumn(name = "controller_input_id")
     )
     @MapKeyColumn(name = "key")
-    @Column(name = "value")
+    // // @Lob
+    @Column(name = "value", columnDefinition = "TEXT")
     private Map<String, String> inputCookies;
 
     public void grpcToEntity(InputsDto inputsDto){

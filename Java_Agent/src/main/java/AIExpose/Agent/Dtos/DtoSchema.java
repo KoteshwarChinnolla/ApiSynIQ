@@ -14,5 +14,5 @@ public class DtoSchema {
     private String name = "";
     private String description = "";
     private String example = "";
-    private List<DescribeDto> fields = new ArrayList<>();
+    private List<Describe> fields = new ArrayList<>();
 }

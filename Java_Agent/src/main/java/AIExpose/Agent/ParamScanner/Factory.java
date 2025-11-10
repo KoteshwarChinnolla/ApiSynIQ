@@ -2,8 +2,8 @@ package AIExpose.Agent.ParamScanner;
 
 import AIExpose.Agent.AIExposeEp.TypeResolver;
 import AIExpose.Agent.Annotations.AIExposeEpHttp;
-import AIExpose.Agent.Dtos.DescribeDto;
-import AIExpose.Agent.Dtos.InputsDto;
+import AIExpose.Agent.Dtos.Describe;
+import AIExpose.Agent.Dtos.Inputs;
 import AIExpose.Agent.enums.ParamType;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,12 +22,12 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Factory {
-    public static Map<String, InputsDto> generateCombinedSchema(
+    public static Map<String, Inputs> generateCombinedSchema(
             Method method,
-            Map<String, DescribeDto> describeDtosForParms) throws JsonProcessingException {
+            Map<String, Describe> describeDtosForParms) throws JsonProcessingException {
 
-        InputsDto inputsDtoActual = new InputsDto();
-        InputsDto inputsDtoDescribe = new InputsDto();
+        Inputs inputsDtoActual = new Inputs();
+        Inputs inputsDtoDescribe = new Inputs();
         ObjectMapper mapper = JsonMapper.builder()
                 .addModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
@@ -46,7 +46,7 @@ public class Factory {
                 String name = !pv.value().isEmpty() ? pv.value() : paramName;
 
                 // --- Describe ---
-                DescribeDto pathParams = Describe.getDescribedParams(parameter, aiExposeEpHttp, ParamType.PATH_PARAM);
+                Describe pathParams = AIExpose.Agent.ParamScanner.Describe.getDescribedParams(parameter, aiExposeEpHttp, ParamType.PATH_PARAM);
                 describeDtosForParms.put(name, pathParams);
                 inputsDtoDescribe.getInputPathParams().put(name, paramType.getName());
 
@@ -60,7 +60,7 @@ public class Factory {
                 String name = !rp.value().isEmpty() ? rp.value() : paramName;
 
                 // --- Describe ---
-                DescribeDto reqParams = Describe.getDescribedParams(parameter, aiExposeEpHttp, ParamType.REQUEST_PARAM);
+                Describe reqParams = AIExpose.Agent.ParamScanner.Describe.getDescribedParams(parameter, aiExposeEpHttp, ParamType.REQUEST_PARAM);
                 describeDtosForParms.put(name, reqParams);
                 inputsDtoDescribe.getInputQueryParams().put(name, paramType.getName());
 
@@ -86,7 +86,7 @@ public class Factory {
                 String name = !rh.value().isEmpty() ? rh.value() : paramName;
 
                 // --- Describe ---
-                DescribeDto headerParams = Describe.getDescribedParams(parameter, aiExposeEpHttp, ParamType.REQUEST_HEADER);
+                Describe headerParams = AIExpose.Agent.ParamScanner.Describe.getDescribedParams(parameter, aiExposeEpHttp, ParamType.REQUEST_HEADER);
                 describeDtosForParms.put(name, headerParams);
                 inputsDtoDescribe.getInputHeaders().put(name, paramType.getName());
 
@@ -102,7 +102,7 @@ public class Factory {
 
                 if (TypeResolver.isSimpleType(paramType)) {
                     // --- Describe ---
-                    DescribeDto d = Describe.paramsToDescribe(parameter, ParamType.VARIABLE);
+                    Describe d = AIExpose.Agent.ParamScanner.Describe.paramsToDescribe(parameter, ParamType.VARIABLE);
                     describeDtosForParms.put(paramName, d);
                     inputsDtoDescribe.getInputVariables().put(paramName, paramType.getName());
 
@@ -119,7 +119,7 @@ public class Factory {
             }
         }
 
-        Map<String, InputsDto> result = new HashMap<>();
+        Map<String, Inputs> result = new HashMap<>();
         result.put("describe", inputsDtoDescribe);
         result.put("actual", inputsDtoActual);
         return result;

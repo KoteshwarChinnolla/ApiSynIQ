@@ -11,7 +11,10 @@ import java.util.List;
 
 
 @Repository
-public interface SynIqDataRepository extends JpaRepository<SynIqData, Long>  {
-    @Query(value = "SELECT * FROM syniq_data WHERE description_embedding_id IN (:ids)", nativeQuery = true)
+public interface SynIqDataRepository extends JpaRepository<SynIqData, String>  {
+    @Query(value = "SELECT * FROM syniq_data WHERE input_description_embedding_id IN (:ids)", nativeQuery = true)
     List<SynIqData> findAllByEmbeddingIds(@Param("ids") List<Long> ids);
+
+    @Query(value = "SELECT * FROM syniq_data WHERE return_description_embedding_id IN (:ids)", nativeQuery = true)
+    List<SynIqData> findAllByReturnDescription(@Param("ids") List<Long> ids);
 }

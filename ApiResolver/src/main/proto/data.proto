@@ -22,6 +22,7 @@ message InputData {
     repeated string filteringTags = 12;
     map<string, DtoSchema> dtoSchemas = 13;
     map<string, DescribeDto> describeDtosForParms= 14;
+    string globalPath = 15;
 }
 
 
@@ -50,4 +51,24 @@ message DescribeDto {
     string options = 5;
     bool autoExecute = 6;
     string example = 7;
+}
+
+message InputsAndReturnsMatch {
+  repeated InputData inputsMatchData = 1;
+  repeated InputData returnMatchData = 2;
+}
+
+message repeatedInput {
+  repeated InputData inputs = 1;
+}
+
+message query{
+  string query=1;
+}
+
+service Controller {
+  rpc searchMatchesForBoth(query) returns (InputsAndReturnsMatch);
+  rpc searchMatchesForInputDescription(query) returns (repeatedInput);
+  rpc searchMatchesForReturnDescription(query) returns (repeatedInput);
+  rpc save(InputData) returns (query);
 }

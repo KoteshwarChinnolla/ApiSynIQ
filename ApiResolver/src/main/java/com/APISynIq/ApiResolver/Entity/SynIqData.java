@@ -22,34 +22,44 @@ import org.hibernate.type.SqlTypes;
 public class SynIqData {
 
   @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+  private String id;
 
   private String name;
   private String endpoint;
   private String httpMethod;
+
+
+    @PrePersist
+    public void generateId() {
+        if (this.id == null && this.httpMethod != null && this.endpoint != null) {
+            this.id = String.format("%s-%s", this.httpMethod, this.endpoint);
+        }
+    }
 
   // ✅ Use ElementCollection for lists
   @ElementCollection
   @CollectionTable(name = "syniq_tags", joinColumns = @JoinColumn(name = "syniq_id"))
   @Column(name = "tag")
   private List<String> tags;
-
+    @Column(columnDefinition = "TEXT")
   private String description;
+  @Column(columnDefinition = "TEXT")
   private String returnDescription;
 
   // ✅ Define proper join columns for OneToOne
   @OneToOne(cascade = CascadeType.ALL)
   @JoinColumn(name = "inputs_describe_id")
   private InputsDtoEntity inputsDescribe;
-
+    // @Lob
+    @Column(columnDefinition = "TEXT")
   private String responseBody;
   private boolean autoExecute;
 
   @OneToOne(cascade = CascadeType.ALL)
   @JoinColumn(name = "inputs_id")
   private InputsDtoEntity inputs;
-
+  // @Lob
+    @Column(columnDefinition = "TEXT")
   private String outputBody;
 
 
@@ -67,7 +77,7 @@ public class SynIqData {
   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
   @JoinColumn(name = "syniq_data_id")
   @MapKeyColumn(name = "key_name")
-  private Map<String, DescribeDtoEntity> describeDtosForParms = new HashMap<>();
+  private Map<String, DescribeFieldsEntity> describeDtosForParms = new HashMap<>();
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "input_description_embedding_id")
@@ -104,10 +114,10 @@ public class SynIqData {
             entityOfDtoSchemas.put(key, dtoSchemaEntity);
         }
         this.dtoSchemas = entityOfDtoSchemas;
-        Map<String, DescribeDtoEntity> entityOfDescribeDtos = new HashMap<>();
+        Map<String, DescribeFieldsEntity> entityOfDescribeDtos = new HashMap<>();
         Map<String, DescribeDto> grpcDescribeDto = inputData.getDescribeDtosForParmsMap();
         for(String key:grpcDescribeDto.keySet()){
-            DescribeDtoEntity describeDtoEntity = new DescribeDtoEntity();
+            DescribeFieldsEntity describeDtoEntity = new DescribeFieldsEntity();
             DescribeDto value  = grpcDescribeDto.get(key);
             describeDtoEntity.grpcToEntity(value);
             entityOfDescribeDtos.put(key, describeDtoEntity);
@@ -134,7 +144,7 @@ public class SynIqData {
       for (Map.Entry<String, DtoSchemaEntity> entry : this.dtoSchemas.entrySet()) {
           builder.putDtoSchemas(entry.getKey(), entry.getValue().toGrpcDtoSchema());
       }
-      for (Map.Entry<String, DescribeDtoEntity> entry : this.describeDtosForParms.entrySet()) {
+      for (Map.Entry<String, DescribeFieldsEntity> entry : this.describeDtosForParms.entrySet()) {
           builder.putDescribeDtosForParms(entry.getKey(), entry.getValue().toGrpcDescribeDto());
       }
 
