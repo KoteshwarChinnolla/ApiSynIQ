@@ -1,7 +1,7 @@
 package com.APISynIq.ApiResolver.Entity;
 
 
-import com.apisyniq.grpc.DescribeDto;
+import com.apisyniq.grpc.Describe;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -12,7 +12,7 @@ import lombok.*;
 @Entity
 @Builder
 @Table(name = "describe_dto")
-public class DescribeFieldsEntity {
+public class DescribeEntity {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
@@ -26,7 +26,7 @@ public class DescribeFieldsEntity {
   @Column(columnDefinition = "TEXT")
   private String example;
 
-  public void grpcToEntity(DescribeDto describeDto) {
+  public void grpcToEntity(Describe describeDto) {
       this.name = describeDto.getName();
       this.description = describeDto.getDescription();
       this.dataType = describeDto.getDataType();
@@ -37,8 +37,8 @@ public class DescribeFieldsEntity {
       this.autoExecute = describeDto.getAutoExecute();
   }
 
-  public DescribeDto toGrpcDescribeDto() {
-    com.apisyniq.grpc.DescribeDto.Builder builder = com.apisyniq.grpc.DescribeDto.newBuilder()
+  public Describe toGrpcDescribe() {
+    com.apisyniq.grpc.Describe.Builder builder = com.apisyniq.grpc.Describe.newBuilder()
         .setName(this.name != null ? this.name : "")
         .setDescription(this.description != null ? this.description : "")
         .setDataType(this.dataType != null ? this.dataType : "")

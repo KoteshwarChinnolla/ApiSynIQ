@@ -2,7 +2,7 @@ package com.APISynIq.ApiResolver.Entity;
 
 import java.util.*;
 
-import com.apisyniq.grpc.InputsDto;
+import com.apisyniq.grpc.Inputs;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -14,7 +14,7 @@ import lombok.*;
 @Builder
 @Entity
 @Table(name = "controller_inputs")
-public class InputsDtoEntity {
+public class InputsEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -85,7 +85,7 @@ public class InputsDtoEntity {
     @Column(name = "value", columnDefinition = "TEXT")
     private Map<String, String> inputCookies;
 
-    public void grpcToEntity(InputsDto inputsDto){
+    public void grpcToEntity(Inputs inputsDto){
         this.inputBody = inputsDto.getInputBodyMap();
         this.inputPathParams = inputsDto.getInputPathParamsMap();
         this.inputQueryParams = inputsDto.getInputQueryParamsMap();
@@ -94,8 +94,8 @@ public class InputsDtoEntity {
         this.inputCookies = inputsDto.getInputCookiesMap();
     }
 
-  public InputsDto toGrpcInputsDto() {
-    InputsDto.Builder builder = InputsDto.newBuilder();
+  public Inputs toGrpcInputs() {
+    Inputs.Builder builder = Inputs.newBuilder();
     builder.putAllInputBody(inputBody)
             .putAllInputPathParams(inputPathParams)
             .putAllInputQueryParams(inputQueryParams)

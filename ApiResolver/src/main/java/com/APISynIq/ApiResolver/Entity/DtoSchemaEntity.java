@@ -2,10 +2,9 @@ package com.APISynIq.ApiResolver.Entity;
 
 import java.util.*;
 
-import com.apisyniq.grpc.DescribeDto;
+import com.apisyniq.grpc.Describe;
 import com.apisyniq.grpc.DtoSchema;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -27,20 +26,20 @@ public class DtoSchemaEntity {
     @Column(columnDefinition = "TEXT")
     private String example;
 
-    // ✅ One DtoSchemaEntity -> many DescribeDtoEntity
+    // ✅ One DtoSchemaEntity -> many DescribeEntity
     @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JoinColumn(name = "dto_schema_id") // foreign key in DescribeDtoEntity
-    private List<DescribeFieldsEntity> fields;
+    @JoinColumn(name = "dto_schema_id") // foreign key in DescribeEntity
+    private List<DescribeEntity> fields;
 
     public void grpcToEntity(DtoSchema dtoSchema) {
         this.className = dtoSchema.getClassName();
         this.name = dtoSchema.getName();
         this.description = dtoSchema.getDescription();
         this.example = dtoSchema.getExample();
-        List<DescribeDto> grpcDescribe = dtoSchema.getFieldsList();
-        List<DescribeFieldsEntity> grpcDtoSchema = new ArrayList<>();
-        for(DescribeDto describeDto : grpcDescribe){
-            DescribeFieldsEntity describeFieldsEntity = new DescribeFieldsEntity();
+        List<Describe> grpcDescribe = dtoSchema.getFieldsList();
+        List<DescribeEntity> grpcDtoSchema = new ArrayList<>();
+        for(Describe describeDto : grpcDescribe){
+            DescribeEntity describeFieldsEntity = new DescribeEntity();
             describeFieldsEntity.grpcToEntity(describeDto);
             grpcDtoSchema.add(describeFieldsEntity);
         }
@@ -54,8 +53,8 @@ public class DtoSchemaEntity {
                 .setDescription(this.description != null ? this.description : "")
                 .setExample(this.example != null ? this.example : "");
         
-        for (DescribeFieldsEntity field : this.fields) {
-            builder.addFields(field.toGrpcDescribeDto());
+        for (DescribeEntity field : this.fields) {
+            builder.addFields(field.toGrpcDescribe());
         }
         
         return builder.build();

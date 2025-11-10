@@ -4,7 +4,7 @@ import com.apisyniq.grpc.InputsAndReturnsMatch;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.APISynIq.ApiResolver.Entity.SynIqData;
+import com.APISynIq.ApiResolver.Entity.EndpointDataEntity;
 import com.APISynIq.ApiResolver.Service.SynIqDataService;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,8 +22,8 @@ public class Controller {
     }
 
     @PostMapping("/save")
-    public String postMethodName(@RequestBody SynIqData entity) {
-        return "Data saved with ID: " + synIqDataService.save(entity.toGrpcInputData()).join().getId();
+    public String postMethodName(@RequestBody EndpointDataEntity entity) {
+        return "Data saved with ID: " + synIqDataService.save(entity.toGrpcEndpointData()).join().getId();
     }
 
     @PostMapping("/searchMatchesForBoth")
@@ -32,9 +32,9 @@ public class Controller {
     }
 
     @PostMapping("/searchMatchesForInputDescrition")
-    public List<SynIqData> searchForInputDes(@RequestBody String entity) { return synIqDataService.inputsDesMatch(entity);}
+    public List<EndpointDataEntity> searchForInputDes(@RequestBody String entity) { return synIqDataService.inputsDesMatch(entity);}
 
     @PostMapping("/searchMatchesForReturnDescription")
-    public List<SynIqData> searchForReturnDes(@RequestBody String entity) { return synIqDataService.returnDesMatch(entity);}
+    public List<EndpointDataEntity> searchForReturnDes(@RequestBody String entity) { return synIqDataService.returnDesMatch(entity);}
 
 }

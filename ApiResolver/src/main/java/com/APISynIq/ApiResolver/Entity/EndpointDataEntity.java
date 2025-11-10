@@ -1,17 +1,13 @@
 package com.APISynIq.ApiResolver.Entity;
 
-import com.apisyniq.grpc.DescribeDto;
+import com.apisyniq.grpc.Describe;
 import com.apisyniq.grpc.DtoSchema;
-import com.apisyniq.grpc.InputsDto;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.*;
 
-import com.apisyniq.grpc.InputData;
-import org.hibernate.annotations.Array;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
+import com.apisyniq.grpc.EndpointData;
 
 @Data
 @NoArgsConstructor
@@ -19,7 +15,7 @@ import org.hibernate.type.SqlTypes;
 @Builder
 @Entity
 @Table(name = "syniq_data")
-public class SynIqData {
+public class EndpointDataEntity {
 
   @Id
   private String id;
@@ -49,7 +45,7 @@ public class SynIqData {
   // ✅ Define proper join columns for OneToOne
   @OneToOne(cascade = CascadeType.ALL)
   @JoinColumn(name = "inputs_describe_id")
-  private InputsDtoEntity inputsDescribe;
+  private InputsEntity inputsDescribe;
     // @Lob
     @Column(columnDefinition = "TEXT")
   private String responseBody;
@@ -57,7 +53,7 @@ public class SynIqData {
 
   @OneToOne(cascade = CascadeType.ALL)
   @JoinColumn(name = "inputs_id")
-  private InputsDtoEntity inputs;
+  private InputsEntity inputs;
   // @Lob
     @Column(columnDefinition = "TEXT")
   private String outputBody;
@@ -77,7 +73,7 @@ public class SynIqData {
   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
   @JoinColumn(name = "syniq_data_id")
   @MapKeyColumn(name = "key_name")
-  private Map<String, DescribeFieldsEntity> describeDtosForParms = new HashMap<>();
+  private Map<String, DescribeEntity> describeDtosForParms = new HashMap<>();
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "input_description_embedding_id")
@@ -89,17 +85,17 @@ public class SynIqData {
     @JsonIgnore
     private DescriptionEmbeddingEntity returnDescriptionEmbedding;
 
-    public void grpcToEntity(InputData inputData){
+    public void grpcToEntity(EndpointData inputData){
         this.name = inputData.getName();
         this.endpoint = inputData.getEndpoint();
         this.httpMethod = inputData.getHttpMethod();
         this.description = inputData.getDescription();
         this.returnDescription = inputData.getReturnDescription();
         this.autoExecute = inputData.getAutoExecute();
-        InputsDtoEntity inputsDtoEntity = new InputsDtoEntity();
+        InputsEntity inputsDtoEntity = new InputsEntity();
         inputsDtoEntity.grpcToEntity(inputData.getInputsDescribe());
         this.inputsDescribe = inputsDtoEntity;
-        InputsDtoEntity inputsEntity = new InputsDtoEntity();
+        InputsEntity inputsEntity = new InputsEntity();
         inputsEntity.grpcToEntity(inputData.getInputs());
         this.inputs = inputsEntity;
         this.outputBody =  inputData.getOutputBody();
@@ -114,11 +110,11 @@ public class SynIqData {
             entityOfDtoSchemas.put(key, dtoSchemaEntity);
         }
         this.dtoSchemas = entityOfDtoSchemas;
-        Map<String, DescribeFieldsEntity> entityOfDescribeDtos = new HashMap<>();
-        Map<String, DescribeDto> grpcDescribeDto = inputData.getDescribeDtosForParmsMap();
+        Map<String, DescribeEntity> entityOfDescribeDtos = new HashMap<>();
+        Map<String, Describe> grpcDescribeDto = inputData.getDescribeDtosForParmsMap();
         for(String key:grpcDescribeDto.keySet()){
-            DescribeFieldsEntity describeDtoEntity = new DescribeFieldsEntity();
-            DescribeDto value  = grpcDescribeDto.get(key);
+            DescribeEntity describeDtoEntity = new DescribeEntity();
+            Describe value  = grpcDescribeDto.get(key);
             describeDtoEntity.grpcToEntity(value);
             entityOfDescribeDtos.put(key, describeDtoEntity);
         }
@@ -127,16 +123,16 @@ public class SynIqData {
 
     }
 
-  public InputData toGrpcInputData() {
-    InputData.Builder builder = InputData.newBuilder()
+  public EndpointData toGrpcEndpointData() {
+    EndpointData.Builder builder = EndpointData.newBuilder()
         .setName(this.name != null ? this.name : "")
         .setEndpoint(this.endpoint != null ? this.endpoint : "")
         .setHttpMethod(this.httpMethod != null ? this.httpMethod : "")
         .setDescription(this.description != null ? this.description : "")
         .setReturnDescription(this.returnDescription != null ? this.returnDescription : "")
         .setAutoExecute(this.autoExecute)
-        .setInputsDescribe(this.inputsDescribe != null ? this.inputsDescribe.toGrpcInputsDto() : null)
-        .setInputs(this.inputs != null ? this.inputs.toGrpcInputsDto() : null)
+        .setInputsDescribe(this.inputsDescribe != null ? this.inputsDescribe.toGrpcInputs() : null)
+        .setInputs(this.inputs != null ? this.inputs.toGrpcInputs() : null)
         .setOutputBody(this.outputBody != null ? this.outputBody : null)
         .addAllFilteringTags(this.filteringTags != null ? this.filteringTags : Collections.emptyList())
         .setResponseBody(this.responseBody != null ? this.responseBody : null);
@@ -144,8 +140,8 @@ public class SynIqData {
       for (Map.Entry<String, DtoSchemaEntity> entry : this.dtoSchemas.entrySet()) {
           builder.putDtoSchemas(entry.getKey(), entry.getValue().toGrpcDtoSchema());
       }
-      for (Map.Entry<String, DescribeFieldsEntity> entry : this.describeDtosForParms.entrySet()) {
-          builder.putDescribeDtosForParms(entry.getKey(), entry.getValue().toGrpcDescribeDto());
+      for (Map.Entry<String, DescribeEntity> entry : this.describeDtosForParms.entrySet()) {
+          builder.putDescribeDtosForParms(entry.getKey(), entry.getValue().toGrpcDescribe());
       }
 
       if (this.tags != null) {
