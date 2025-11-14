@@ -3,7 +3,7 @@
 import grpc
 import warnings
 
-from proto import data_pb2 as proto_dot_data__pb2
+from . import data_pb2 as data__pb2
 
 GRPC_GENERATED_VERSION = '1.76.0'
 GRPC_VERSION = grpc.__version__
@@ -18,7 +18,7 @@ except ImportError:
 if _version_not_supported:
     raise RuntimeError(
         f'The grpc package installed is at version {GRPC_VERSION},'
-        + ' but the generated code in proto/data_pb2_grpc.py depends on'
+        + ' but the generated code in data_pb2_grpc.py depends on'
         + f' grpcio>={GRPC_GENERATED_VERSION}.'
         + f' Please upgrade your grpc module to grpcio>={GRPC_GENERATED_VERSION}'
         + f' or downgrade your generated code using grpcio-tools<={GRPC_VERSION}.'
@@ -36,23 +36,23 @@ class ControllerStub(object):
         """
         self.searchMatchesForBoth = channel.unary_unary(
                 '/apisyniq.Controller/searchMatchesForBoth',
-                request_serializer=proto_dot_data__pb2.query.SerializeToString,
-                response_deserializer=proto_dot_data__pb2.InputsAndReturnsMatch.FromString,
+                request_serializer=data__pb2.query.SerializeToString,
+                response_deserializer=data__pb2.InputsAndReturnsMatch.FromString,
                 _registered_method=True)
         self.searchMatchesForInputDescription = channel.unary_unary(
                 '/apisyniq.Controller/searchMatchesForInputDescription',
-                request_serializer=proto_dot_data__pb2.query.SerializeToString,
-                response_deserializer=proto_dot_data__pb2.repeatedInput.FromString,
+                request_serializer=data__pb2.query.SerializeToString,
+                response_deserializer=data__pb2.repeatedInput.FromString,
                 _registered_method=True)
         self.searchMatchesForReturnDescription = channel.unary_unary(
                 '/apisyniq.Controller/searchMatchesForReturnDescription',
-                request_serializer=proto_dot_data__pb2.query.SerializeToString,
-                response_deserializer=proto_dot_data__pb2.repeatedInput.FromString,
+                request_serializer=data__pb2.query.SerializeToString,
+                response_deserializer=data__pb2.repeatedInput.FromString,
                 _registered_method=True)
         self.save = channel.unary_unary(
                 '/apisyniq.Controller/save',
-                request_serializer=proto_dot_data__pb2.EndpointData.SerializeToString,
-                response_deserializer=proto_dot_data__pb2.query.FromString,
+                request_serializer=data__pb2.EndpointData.SerializeToString,
+                response_deserializer=data__pb2.query.FromString,
                 _registered_method=True)
 
 
@@ -88,23 +88,23 @@ def add_ControllerServicer_to_server(servicer, server):
     rpc_method_handlers = {
             'searchMatchesForBoth': grpc.unary_unary_rpc_method_handler(
                     servicer.searchMatchesForBoth,
-                    request_deserializer=proto_dot_data__pb2.query.FromString,
-                    response_serializer=proto_dot_data__pb2.InputsAndReturnsMatch.SerializeToString,
+                    request_deserializer=data__pb2.query.FromString,
+                    response_serializer=data__pb2.InputsAndReturnsMatch.SerializeToString,
             ),
             'searchMatchesForInputDescription': grpc.unary_unary_rpc_method_handler(
                     servicer.searchMatchesForInputDescription,
-                    request_deserializer=proto_dot_data__pb2.query.FromString,
-                    response_serializer=proto_dot_data__pb2.repeatedInput.SerializeToString,
+                    request_deserializer=data__pb2.query.FromString,
+                    response_serializer=data__pb2.repeatedInput.SerializeToString,
             ),
             'searchMatchesForReturnDescription': grpc.unary_unary_rpc_method_handler(
                     servicer.searchMatchesForReturnDescription,
-                    request_deserializer=proto_dot_data__pb2.query.FromString,
-                    response_serializer=proto_dot_data__pb2.repeatedInput.SerializeToString,
+                    request_deserializer=data__pb2.query.FromString,
+                    response_serializer=data__pb2.repeatedInput.SerializeToString,
             ),
             'save': grpc.unary_unary_rpc_method_handler(
                     servicer.save,
-                    request_deserializer=proto_dot_data__pb2.EndpointData.FromString,
-                    response_serializer=proto_dot_data__pb2.query.SerializeToString,
+                    request_deserializer=data__pb2.EndpointData.FromString,
+                    response_serializer=data__pb2.query.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -132,8 +132,8 @@ class Controller(object):
             request,
             target,
             '/apisyniq.Controller/searchMatchesForBoth',
-            proto_dot_data__pb2.query.SerializeToString,
-            proto_dot_data__pb2.InputsAndReturnsMatch.FromString,
+            data__pb2.query.SerializeToString,
+            data__pb2.InputsAndReturnsMatch.FromString,
             options,
             channel_credentials,
             insecure,
@@ -159,8 +159,8 @@ class Controller(object):
             request,
             target,
             '/apisyniq.Controller/searchMatchesForInputDescription',
-            proto_dot_data__pb2.query.SerializeToString,
-            proto_dot_data__pb2.repeatedInput.FromString,
+            data__pb2.query.SerializeToString,
+            data__pb2.repeatedInput.FromString,
             options,
             channel_credentials,
             insecure,
@@ -186,8 +186,8 @@ class Controller(object):
             request,
             target,
             '/apisyniq.Controller/searchMatchesForReturnDescription',
-            proto_dot_data__pb2.query.SerializeToString,
-            proto_dot_data__pb2.repeatedInput.FromString,
+            data__pb2.query.SerializeToString,
+            data__pb2.repeatedInput.FromString,
             options,
             channel_credentials,
             insecure,
@@ -213,8 +213,8 @@ class Controller(object):
             request,
             target,
             '/apisyniq.Controller/save',
-            proto_dot_data__pb2.EndpointData.SerializeToString,
-            proto_dot_data__pb2.query.FromString,
+            data__pb2.EndpointData.SerializeToString,
+            data__pb2.query.FromString,
             options,
             channel_credentials,
             insecure,

@@ -26,16 +26,27 @@ public class DescribeEntity {
   @Column(columnDefinition = "TEXT")
   private String example;
 
-  public void grpcToEntity(Describe describeDto) {
-      this.name = describeDto.getName();
-      this.description = describeDto.getDescription();
-      this.dataType = describeDto.getDataType();
-      this.defaultValue = describeDto.getDefaultValue();
-      this.options = describeDto.getOptions();
-      this.autoExecute = describeDto.getAutoExecute();
-      this.example = describeDto.getExample();
-      this.autoExecute = describeDto.getAutoExecute();
-  }
+    public void grpcToEntity(Describe describeDto) {
+        if (describeDto == null) {
+            this.name = null;
+            this.description = null;
+            this.dataType = null;
+            this.defaultValue = null;
+            this.options = null;
+            this.autoExecute = false;
+            this.example = null;
+            return;
+        }
+
+        this.name = describeDto.getName();
+        this.description = describeDto.getDescription();
+        this.dataType = describeDto.getDataType();
+        this.defaultValue = describeDto.getDefaultValue();
+        this.options = describeDto.getOptions();
+        this.example = describeDto.getExample();
+        this.autoExecute = describeDto.getAutoExecute();
+    }
+
 
   public Describe toGrpcDescribe() {
     com.apisyniq.grpc.Describe.Builder builder = com.apisyniq.grpc.Describe.newBuilder()

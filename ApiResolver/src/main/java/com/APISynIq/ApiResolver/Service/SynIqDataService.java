@@ -4,6 +4,7 @@ import com.APISynIq.ApiResolver.Entity.DescriptionEmbeddingEntity;
 import com.APISynIq.ApiResolver.Repository.EmbdRepo;
 import com.apisyniq.grpc.EndpointData;
 import com.apisyniq.grpc.InputsAndReturnsMatch;
+import org.hibernate.Hibernate;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.annotation.Async;
@@ -14,6 +15,7 @@ import com.APISynIq.ApiResolver.Repository.SynIqDataRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -42,9 +44,8 @@ public class SynIqDataService {
     @Transactional
     public CompletableFuture<EndpointDataEntity> save(EndpointData data) {
         String generatedId = String.format("%s-%s", data.getHttpMethod(), data.getEndpoint());
-
+        System.out.println(generatedId);
         EndpointDataEntity endpointDataEntity = repository.findById(generatedId).orElse(new EndpointDataEntity());
-
         CompletableFuture<Void> inputEmbeddingFuture = CompletableFuture.runAsync(() -> {
             try {
                 String newDesc = data.getDescription();
@@ -82,22 +83,23 @@ public class SynIqDataService {
         });
 
         CompletableFuture.allOf(inputEmbeddingFuture, returnEmbeddingFuture).join();
-        endpointDataEntity.grpcToEntity(data);
-        if (endpointDataEntity.getId() == null) {
-            endpointDataEntity.setId(generatedId);
-        }
+        EndpointDataEntity dataToSave = new  EndpointDataEntity();
+        dataToSave.grpcToEntity(data);
+        dataToSave.setInputDescriptionEmbedding(endpointDataEntity.getInputDescriptionEmbedding());
+        dataToSave.setReturnDescriptionEmbedding(endpointDataEntity.getReturnDescriptionEmbedding());
+        dataToSave.setId(generatedId);
 
-        EndpointDataEntity savedEntity = repository.save(endpointDataEntity);
+        EndpointDataEntity savedEntity = repository.save(dataToSave);
 
         return CompletableFuture.completedFuture(savedEntity);
     }
 
 
     @Transactional(readOnly = true)
-    public InputsAndReturnsMatch queryForBoth(String input){
+    public InputsAndReturnsMatch queryForBoth(String input, int limit){
         float[] embeddingsForInput = embeddingModel.embed(input);
-        CompletableFuture<List<EndpointDataEntity>> inputsFuture = findAllByInputDescription(embeddingsForInput);
-        CompletableFuture<List<EndpointDataEntity>> returnsFuture = findAllByReturnDescription(embeddingsForInput);
+        CompletableFuture<List<EndpointDataEntity>> inputsFuture = findAllByInputDescription(embeddingsForInput, limit);
+        CompletableFuture<List<EndpointDataEntity>> returnsFuture = findAllByReturnDescription(embeddingsForInput, limit);
         CompletableFuture.allOf(inputsFuture, returnsFuture).join();
         InputsAndReturnsMatch.Builder builder = InputsAndReturnsMatch.newBuilder();
         builder.addAllInputsMatchData(inputsFuture.join().stream().map(EndpointDataEntity::toGrpcEndpointData).collect(Collectors.toList()));
@@ -106,47 +108,54 @@ public class SynIqDataService {
     }
 
     @Transactional(readOnly = true)
-    public List<EndpointDataEntity> inputsDesMatch(String input){
+    public List<EndpointData> inputsDesMatch(String input, int limit){
         float[] embeddingsForInput = embeddingModel.embed(input);
-        CompletableFuture<List<EndpointDataEntity>> inputsFuture = findAllByInputDescription(embeddingsForInput);
-        return inputsFuture.join();
+        CompletableFuture<List<EndpointDataEntity>> inputsFuture = findAllByInputDescription(embeddingsForInput, limit);
+        return inputsFuture.join().stream().map(EndpointDataEntity::toGrpcEndpointData).collect(Collectors.toList());
     }
 
     @Transactional
-    public List<EndpointDataEntity> returnDesMatch(String input){
+    public List<EndpointData> returnDesMatch(String input, int limit){
         float[] embeddingsForInput = embeddingModel.embed(input);
-        CompletableFuture<List<EndpointDataEntity>> returnsFuture = findAllByReturnDescription(embeddingsForInput);
-        return returnsFuture.join();
+        CompletableFuture<List<EndpointDataEntity>> returnsFuture = findAllByReturnDescription(embeddingsForInput, limit);
+        return returnsFuture.join().stream().map(EndpointDataEntity::toGrpcEndpointData).collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
     @Async
-    public CompletableFuture<List<EndpointDataEntity>> findAllByInputDescription(float[] embeddingsForInput){
+    public CompletableFuture<List<EndpointDataEntity>> findAllByInputDescription(float[] embeddingsForInput, int limit) {
         List<Long> listDesInputs = jdbcClient.sql("""
             SELECT id
             FROM syniq_description_embeddings
             WHERE type = 'InputDescription'
             ORDER BY embedding <=> CAST(:user_promt AS vector)
-            LIMIT 1
+            LIMIT :limit
         """)
                 .param("user_promt", embeddingsForInput)
+                .param("limit", limit)
                 .query((rs, rowNum) -> rs.getLong("id"))
                 .list();
+
         System.out.println(listDesInputs);
-        return  CompletableFuture.completedFuture(repository.findAllByEmbeddingIds(listDesInputs));
+
+        // fetch entities and initialize lazy fields
+        List<EndpointDataEntity> entities = repository.findAllByEmbeddingIds(listDesInputs);
+
+        return CompletableFuture.completedFuture(entities);
     }
 
     @Transactional(readOnly = true)
     @Async
-    public CompletableFuture<List<EndpointDataEntity>> findAllByReturnDescription(float[] embeddingsForInput){
+    public CompletableFuture<List<EndpointDataEntity>> findAllByReturnDescription(float[] embeddingsForInput, Integer limit){
         List<Long> listDesReturn = jdbcClient.sql("""
             SELECT id
             FROM syniq_description_embeddings
             WHERE type = 'ReturnDescription'
             ORDER BY embedding <=> CAST(:user_promt AS vector)
-            LIMIT 1
+            LIMIT :limit
         """)
                 .param("user_promt", embeddingsForInput)
+                .param("limit", limit)
                 .query((rs, rowNum) -> rs.getLong("id"))
                 .list();
         System.out.println(listDesReturn);

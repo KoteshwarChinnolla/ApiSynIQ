@@ -93,22 +93,7 @@ h1 {
   align-items: center;
 }
 
-input[type="search"] {
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: var(--card);
-  color: #e0f7ff;
-  font-size: 14px;
-  width: 200px;
-  transition: all 0.2s ease;
-}
 
-input[type="search"]:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 5px var(--accent);
-}
 
 button {
   display: flex;
@@ -195,7 +180,245 @@ button:hover {
   border-color: #007bff;
   box-shadow: 0 3px 6px rgba(0,0,0,0.2);
 }
+/* 🌙 Theme Variables */
+:root {
+  --background: #0f172a;      /* Page background */
+  --card: #1e293b;            /* Section background */
+  --border: #334155;          /* Border color */
+  --accent: #3b82f6;          /* Primary accent */
+  --accent-hover: #2563eb;    /* Hover accent */
+  --text: #e2e8f0;            /* Text color */
+  --muted: #94a3b8;           /* Subtle text */
+  --font-family: 'Inter', sans-serif;
+}
+.connect-box-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #1e293b;
+  padding: 10px 14px;
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  width: fit-content;
+  margin: 0px auto;
+  transition: all 0.3s ease-in-out;
+}
 
+.connect-box-container:hover {
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.4);
+}
+
+.connect-box-container input {
+  padding: 8px 10px;
+  width: 270px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 14px;
+  outline: none;
+  transition: border 0.3s;
+}
+
+.connect-box-container input:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+}
+
+.connect-box-container button {
+  padding: 8px 16px;
+  background: #22c55e;
+  color: #0f172a;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.connect-box-container button:hover {
+  background: #16a34a;
+  transform: scale(1.05);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.4);
+}
+
+.connect-box-container button:active {
+  transform: scale(0.98);
+}
+
+/* ===============================
+   🔹 Connect Box
+   =============================== */
+.connect-box {
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 20px 24px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0);
+  max-width: 1200px;
+  width: 100%;
+  margin: 0px auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+.connect-box h2 {
+  flex-basis: 100%;
+  text-align: center;
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.connect-box input[type="search"] {
+  flex: 1 1 300px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+  transition: 0.2s border-color, 0.2s box-shadow;
+}
+
+.connect-box input[type="search"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.connect-box button {
+  background: linear-gradient(90deg, var(--accent), var(--accent-hover));
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.connect-box button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4);
+}
+
+.connect-box button:active {
+  transform: scale(0.98);
+}
+
+#status {
+  flex-basis: 100%;
+  text-align: center;
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: 8px;
+}
+
+/* ===============================
+   🔹 Query Section
+   =============================== */
+.query-section {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 12px;
+  background: rgba(245, 222, 179, 0);
+  padding: 16px 20px;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0);
+  max-width: 1200px;
+  width: 100%;
+  margin: 10px auto;
+  color: var(--text);
+  font-family: var(--font-family);
+  flex-wrap: wrap;
+}
+
+/* Layout ratios (balanced proportions) */
+.query-section .query-input { flex: 3; }
+.query-section .query-limit { flex: 1; }
+.query-section .query-endpoint { flex: 2; }
+.query-section .query-run { flex: 1; }
+
+/* Common input & select styling */
+.query-section .query-input,
+.query-section .query-limit,
+.query-section .query-endpoint {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+  transition: 0.2s border-color, 0.2s box-shadow;
+  height: 100%;
+  box-sizing: border-box;
+  min-width: 120px;
+}
+
+.query-section .query-input:focus,
+.query-section .query-limit:focus,
+.query-section .query-endpoint:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+/* Dropdown styling */
+.query-section .query-endpoint {
+  cursor: pointer;
+}
+
+/* 🚀 Run Button */
+.query-section .query-run {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  height: 100%;
+  min-width: 100px;
+}
+
+.query-section .query-run:hover {
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3);
+}
+
+.query-section .query-run:active {
+  transform: scale(0.98);
+  box-shadow: none;
+}
+
+/* ✅ Responsive Layout */
+@media (max-width: 768px) {
+  .query-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .query-section .query-input,
+  .query-section .query-limit,
+  .query-section .query-endpoint,
+  .query-section .query-run {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
 
 .card {
   background: rgba(255, 255, 255, 0.05);
@@ -211,7 +434,7 @@ button:hover {
 }
 
 .controller-header {
-  margin-top: 30px;
+  margin-top: 10px;
   margin-bottom: 15px;
   text-align: left;
 }

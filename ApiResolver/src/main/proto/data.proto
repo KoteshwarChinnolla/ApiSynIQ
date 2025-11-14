@@ -52,6 +52,7 @@ message Describe {
   bool autoExecute = 6;
   string example = 7;
 }
+
 message InputsAndReturnsMatch {
   repeated EndpointData inputsMatchData = 1;
   repeated EndpointData returnMatchData = 2;
@@ -63,6 +64,7 @@ message repeatedInput {
 
 message query{
   string query=1;
+  int32 limit=2;
 }
 
 service Controller {

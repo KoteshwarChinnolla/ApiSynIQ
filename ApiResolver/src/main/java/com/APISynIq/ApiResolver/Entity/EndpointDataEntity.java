@@ -43,7 +43,7 @@ public class EndpointDataEntity {
   private String returnDescription;
 
   // ✅ Define proper join columns for OneToOne
-  @OneToOne(cascade = CascadeType.ALL)
+  @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   @JoinColumn(name = "inputs_describe_id")
   private InputsEntity inputsDescribe;
     // @Lob
@@ -51,10 +51,10 @@ public class EndpointDataEntity {
   private String responseBody;
   private boolean autoExecute;
 
-  @OneToOne(cascade = CascadeType.ALL)
+  @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.EAGER)
   @JoinColumn(name = "inputs_id")
   private InputsEntity inputs;
-  // @Lob
+
     @Column(columnDefinition = "TEXT")
   private String outputBody;
 
@@ -65,10 +65,14 @@ public class EndpointDataEntity {
   private List<String> filteringTags;
 
 
-  @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-  @JoinColumn(name = "syniq_data_id")
-  @MapKeyColumn(name = "key_name")
-  private Map<String, DtoSchemaEntity> dtoSchemas = new HashMap<>();
+    @ManyToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "endpoint_dto_schema",
+            joinColumns = @JoinColumn(name = "endpoint_id"),
+            inverseJoinColumns = @JoinColumn(name = "dto_schema_id")
+    )
+    @MapKeyColumn(name = "key_name") // keep your map key
+    private Map<String, DtoSchemaEntity> dtoSchemas = new HashMap<>();
 
   @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
   @JoinColumn(name = "syniq_data_id")
@@ -85,42 +89,52 @@ public class EndpointDataEntity {
     @JsonIgnore
     private DescriptionEmbeddingEntity returnDescriptionEmbedding;
 
-    public void grpcToEntity(EndpointData inputData){
+    public void grpcToEntity(EndpointData inputData) {
         this.name = inputData.getName();
         this.endpoint = inputData.getEndpoint();
         this.httpMethod = inputData.getHttpMethod();
         this.description = inputData.getDescription();
         this.returnDescription = inputData.getReturnDescription();
         this.autoExecute = inputData.getAutoExecute();
-        InputsEntity inputsDtoEntity = new InputsEntity();
-        inputsDtoEntity.grpcToEntity(inputData.getInputsDescribe());
-        this.inputsDescribe = inputsDtoEntity;
-        InputsEntity inputsEntity = new InputsEntity();
-        inputsEntity.grpcToEntity(inputData.getInputs());
-        this.inputs = inputsEntity;
-        this.outputBody =  inputData.getOutputBody();
-        this.responseBody =  inputData.getResponseBody();
-        this.tags = inputData.getTagsList();
-        Map<String, DtoSchemaEntity> entityOfDtoSchemas = new HashMap<>();
-        Map<String, DtoSchema> dtoSchemas = inputData.getDtoSchemasMap();
-        for(String key:dtoSchemas.keySet()){
-            DtoSchemaEntity dtoSchemaEntity = new DtoSchemaEntity();
-            DtoSchema value = dtoSchemas.get(key);
-            dtoSchemaEntity.grpcToEntity(value);
-            entityOfDtoSchemas.put(key, dtoSchemaEntity);
-        }
-        this.dtoSchemas = entityOfDtoSchemas;
-        Map<String, DescribeEntity> entityOfDescribeDtos = new HashMap<>();
-        Map<String, Describe> grpcDescribeDto = inputData.getDescribeDtosForParmsMap();
-        for(String key:grpcDescribeDto.keySet()){
-            DescribeEntity describeDtoEntity = new DescribeEntity();
-            Describe value  = grpcDescribeDto.get(key);
-            describeDtoEntity.grpcToEntity(value);
-            entityOfDescribeDtos.put(key, describeDtoEntity);
-        }
-        this.describeDtosForParms = entityOfDescribeDtos;
-        this.filteringTags = inputData.getFilteringTagsList();
+        this.outputBody = inputData.getOutputBody();
+        this.responseBody = inputData.getResponseBody();
 
+        if (this.inputsDescribe == null) {
+            this.inputsDescribe = new InputsEntity();
+        }
+        this.inputsDescribe.grpcToEntity(inputData.getInputsDescribe());
+
+        if (this.inputs == null) {
+            this.inputs = new InputsEntity();
+        }
+        this.inputs.grpcToEntity(inputData.getInputs());
+
+        this.tags = new ArrayList<>(inputData.getTagsList());
+        this.filteringTags = new ArrayList<>(inputData.getFilteringTagsList());
+
+        Map<String, DtoSchema> dtoSchemas = inputData.getDtoSchemasMap();
+        if (this.dtoSchemas == null) {
+            this.dtoSchemas = new HashMap<>();
+        } else {
+            this.dtoSchemas.clear();
+        }
+        for (Map.Entry<String, DtoSchema> entry : dtoSchemas.entrySet()) {
+            DtoSchemaEntity dtoSchemaEntity = new DtoSchemaEntity();
+            dtoSchemaEntity.grpcToEntity(entry.getValue());
+            this.dtoSchemas.put(entry.getKey(), dtoSchemaEntity);
+        }
+
+        Map<String, Describe> grpcDescribeDto = inputData.getDescribeDtosForParmsMap();
+        if (this.describeDtosForParms == null) {
+            this.describeDtosForParms = new HashMap<>();
+        } else {
+            this.describeDtosForParms.clear();
+        }
+        for (Map.Entry<String, Describe> entry : grpcDescribeDto.entrySet()) {
+            DescribeEntity describeEntity = new DescribeEntity();
+            describeEntity.grpcToEntity(entry.getValue());
+            this.describeDtosForParms.put(entry.getKey(), describeEntity);
+        }
     }
 
   public EndpointData toGrpcEndpointData() {

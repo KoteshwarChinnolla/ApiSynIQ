@@ -40,7 +40,7 @@ public class AIExposeDtoAspect {
             Describe describe = new Describe();
             if (field.isAnnotationPresent(AIExpose.Agent.Annotations.Describe.class)) {
                 AIExpose.Agent.Annotations.Describe aiExposeVal = field.getAnnotation(AIExpose.Agent.Annotations.Describe.class);
-                describe.setName(aiExposeVal.name()!=""? aiExposeVal.name() : field.getName());
+                describe.setName(field.getName());
                 describe.setDescription(aiExposeVal.description()!=""? aiExposeVal.description() : "No description provided.");
                 describe.setDataType(field.getType().getSimpleName());
                 describe.setDefaultValue(aiExposeVal.defaultValue()!=""? aiExposeVal.defaultValue() : "");

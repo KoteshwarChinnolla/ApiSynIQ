@@ -30,7 +30,6 @@ import java.time.LocalDate;
 public class AttendanceSummaryDTO {
 
     @Describe(
-            name = "Date",
             description = "The date for which the attendance summary is recorded.",
             dataType = "LocalDate",
             autoExecute = false,
@@ -39,7 +38,6 @@ public class AttendanceSummaryDTO {
     private LocalDate date;
 
     @Describe(
-            name = "Present Count",
             description = "Number of employees marked as present on this date.",
             dataType = "int",
             autoExecute = false,
@@ -48,7 +46,6 @@ public class AttendanceSummaryDTO {
     private int present;
 
     @Describe(
-            name = "Absent Count",
             description = "Number of employees marked as absent on this date.",
             dataType = "int",
             autoExecute = false,
@@ -57,7 +54,6 @@ public class AttendanceSummaryDTO {
     private int absent;
 
     @Describe(
-            name = "Paid Approved Leaves",
             description = "Count of leaves that were both paid and approved.",
             dataType = "int",
             autoExecute = false,
@@ -66,7 +62,6 @@ public class AttendanceSummaryDTO {
     private int paidApprovedLeaves;
 
     @Describe(
-            name = "Paid Unapproved Leaves",
             description = "Count of paid leaves that have not yet been approved.",
             dataType = "int",
             autoExecute = false,
@@ -75,7 +70,6 @@ public class AttendanceSummaryDTO {
     private int paidUnapprovedLeaves;
 
     @Describe(
-            name = "Unpaid Approved Leaves",
             description = "Count of unpaid leaves that were approved.",
             dataType = "int",
             autoExecute = false,
@@ -84,7 +78,6 @@ public class AttendanceSummaryDTO {
     private int unpaidApprovedLeaves;
 
     @Describe(
-            name = "Unpaid Unapproved Leaves",
             description = "Count of unpaid leaves still pending approval.",
             dataType = "int",
             autoExecute = false,
@@ -93,7 +86,6 @@ public class AttendanceSummaryDTO {
     private int unpaidUnapprovedLeaves;
 
     @Describe(
-            name = "Sick Leaves",
             description = "Number of approved sick leaves taken on this date.",
             dataType = "int",
             autoExecute = false,
@@ -102,7 +94,6 @@ public class AttendanceSummaryDTO {
     private int sickLeaves;
 
     @Describe(
-            name = "Unapproved Sick Leaves",
             description = "Number of sick leaves not yet approved.",
             dataType = "int",
             autoExecute = false,
@@ -111,7 +102,6 @@ public class AttendanceSummaryDTO {
     private int sickUnapprovedLeaves;
 
     @Describe(
-            name = "Casual Approved Leaves",
             description = "Number of approved casual leaves taken on this date.",
             dataType = "int",
             autoExecute = false,
@@ -120,7 +110,6 @@ public class AttendanceSummaryDTO {
     private int casualApprovedLeaves;
 
     @Describe(
-            name = "Casual Unapproved Leaves",
             description = "Number of casual leaves not yet approved.",
             dataType = "int",
             autoExecute = false,
@@ -129,7 +118,6 @@ public class AttendanceSummaryDTO {
     private int casualUnapprovedLeaves;
 
     @Describe(
-            name = "Total Approved Leaves",
             description = "Total number of approved leaves (of all types).",
             dataType = "int",
             autoExecute = false,
@@ -138,7 +126,6 @@ public class AttendanceSummaryDTO {
     private int approvedLeaves;
 
     @Describe(
-            name = "Pending Leaves",
             description = "Total number of leave requests pending approval.",
             dataType = "int",
             autoExecute = false,

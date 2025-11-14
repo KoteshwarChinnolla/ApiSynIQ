@@ -11,7 +11,9 @@ import java.util.List;
 import java.util.Map;
 
 
-
+import AIExpose.Agent.Stub.GrpcConnectionManager;
+import com.apisyniq.grpc.ControllerGrpc;
+import com.apisyniq.grpc.query;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -23,12 +25,13 @@ import org.springframework.web.bind.annotation.*;
 public class Data {
     private final ApplicationContext applicationContext;
     private final EndpointScanner endpointScanner;
-
+    private final GrpcConnectionManager grpcConnectionManager;
     @Autowired
     public Data(ApplicationContext applicationContext,
-                EndpointScanner endpointScanner) {
+                EndpointScanner endpointScanner, GrpcConnectionManager grpcConnectionManager) {
         this.applicationContext = applicationContext;
         this.endpointScanner = endpointScanner;
+        this.grpcConnectionManager = grpcConnectionManager;
     }
 
     @RequestMapping("/endpoints-info")
@@ -61,4 +64,37 @@ public class Data {
 
         return groupedEndpoints;
     }
+
+    @RequestMapping(value = "/connect", method = RequestMethod.GET)
+    @ResponseBody
+    public Boolean connect() throws JsonProcessingException {
+        grpcConnectionManager.connect();
+        return grpcConnectionManager.isConnected();
+    }
+
+
+    @RequestMapping(value = "/saveAll", method = RequestMethod.GET)
+    @ResponseBody
+    public String saveAll() throws JsonProcessingException {
+        String[] beanNames = applicationContext.getBeanDefinitionNames();
+        ControllerGrpc.ControllerBlockingStub stub = grpcConnectionManager.getStub();
+        for (String beanName : beanNames) {
+            Object bean = applicationContext.getBean(beanName);
+            RestController RestControllerAnnotation = bean.getClass().getAnnotation(RestController.class);
+            AIExposeController aiExposeController = bean.getClass().getAnnotation(AIExposeController.class);
+            if (RestControllerAnnotation != null) {
+                String controllerName = bean.getClass().getSimpleName();
+                for (Method method : bean.getClass().getDeclaredMethods()) {
+                    AIExposeEpHttp epAnnotation = method.getAnnotation(AIExposeEpHttp.class);
+                    EndpointData schema = endpointScanner.before(method, epAnnotation, aiExposeController);
+
+                    query query = stub.save(schema.toGrpcEndpointData());
+                    System.out.println(query);
+                }
+            }
+        }
+        return "Done with saving";
+    }
+
+
 }

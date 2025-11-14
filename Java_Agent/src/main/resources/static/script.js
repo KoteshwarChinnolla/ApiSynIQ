@@ -1,7 +1,142 @@
 let apiJson = null;
 let endpoints = [];
-
 fetchAndRender();
+     // ---- EVENT HANDLERS ----
+document.getElementById("connectBtn").onclick = connectToApi;
+document.getElementById("runBtn").onclick = runQuery;
+
+
+function showApiResolver(){
+  const apiResolver = document.getElementById("apiResolver");
+  const search = document.getElementById("search");
+  const querySection = document.getElementById("querySection");
+  apiResolver.style.display = apiResolver.style.display === 'none' ? 'block' : 'none';
+  querySection.style.display = querySection.style.display === 'none' ? 'block' : 'none';
+  // search.style.display = search.style.display === 'none' ? 'block' : 'none';
+}
+
+     // ---- FUNCTIONS ----
+async function connectToApi() {
+  const apiUrl = document.getElementById("apiUrl").value.trim();
+  const statusEl = document.getElementById("status");
+  const connectBox = document.getElementById("connectBox");
+  const querySection = document.getElementById("querySection");
+  const search = document.getElementById("search");
+
+  if (!apiUrl) {
+    alert("Please enter API base URL");
+    return;
+  }
+
+  statusEl.textContent = "Connecting...";
+  try {
+    const res = await fetch(`${apiUrl}/active`);
+    const text = await res.text();
+    if (text === "true") {
+      statusEl.textContent = "✅ Connected to API Resolver";
+      connectBox.style.display = "none";
+      querySection.style.display = "flex";
+      search.style.display = "none";
+      window.syniqApiUrl = apiUrl;
+    } else {
+      statusEl.textContent = "❌ Connection failed (inactive)";
+    }
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "❌ Failed to connect";
+  }
+}
+
+async function runQuery() {
+  const baseUrl = window.syniqApiUrl;
+  if (!baseUrl) {
+    alert("Please connect to API first!");
+    return;
+  }
+
+  const query = document.getElementById("queryInput").value.trim();
+  const limit = parseInt(document.getElementById("limitInput").value.trim());
+    const endpointSelect = document.getElementById("endpointSelect");
+  const useInput = endpointSelect.value === "searchMatchesForInputDescription";
+  const useReturn = endpointSelect.value === "searchMatchesForReturnDescription";
+
+  if (!query) {
+    alert("Please enter a query string");
+    return;
+  }
+
+  if (!useInput && !useReturn) {
+    alert("Please select at least one endpoint");
+    return;
+  }
+
+  const payload = { query, limit };
+  console.log("📤 Payload:", payload);
+
+  const promises = [];
+  if (useInput) {
+    promises.push(callEndpoint(`${baseUrl}/searchMatchesForInputDescrition`, payload, "InputDescription"));
+  }
+  if (useReturn) {
+    promises.push(callEndpoint(`${baseUrl}/searchMatchesForReturnDescription`, payload, "ReturnDescription"));
+  }
+
+  await Promise.all(promises);
+}
+
+async function callEndpoint(url, payload, label) {
+  try {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    console.log(`✅ ${label} response:`, data);
+
+    const endpointsArray = Array.isArray(data) ? data : [data];
+
+    // Create a "controller" wrapper
+    const controllers = [
+      {
+        id: `${label.toLowerCase()}-controller`,
+        name: `${label} Results`,
+        endpoints: endpointsArray
+      }
+    ];
+
+    // Ensure DOM target exists
+    let grid = document.getElementById("grid");
+    if (!grid) {
+      grid = document.createElement("div");
+      grid.id = "grid";
+      document.body.appendChild(grid);
+    }
+
+    // Also ensure count and empty placeholders exist
+    if (!document.getElementById("count")) {
+      const countDiv = document.createElement("div");
+      countDiv.id = "count";
+      document.body.appendChild(countDiv);
+    }
+    if (!document.getElementById("empty")) {
+      const emptyDiv = document.createElement("div");
+      emptyDiv.id = "empty";
+      emptyDiv.style.display = "none";
+      emptyDiv.textContent = "No endpoints found.";
+      document.body.appendChild(emptyDiv);
+    }
+
+    // 🔥 Call your existing render function
+    renderList(controllers);
+
+  } catch (err) {
+    console.error(`❌ ${label} error:`, err);
+  }
+}
+
+
+
 
 async function fetchAndRender() {
   const baseUrl = window.location.origin;
@@ -67,7 +202,7 @@ function renderList(controllers) {
   const grid = document.getElementById('grid');
   grid.innerHTML = '';
   let totalEndpoints = controllers.reduce((sum, c) => sum + c.endpoints.length, 0);
-  document.getElementById('count').textContent = `${totalEndpoints} endpoint(s)`;
+  // document.getElementById('count').textContent = `${totalEndpoints} endpoint(s)`;
 
   if (controllers.length === 0) {
     document.getElementById('empty').style.display = 'block';

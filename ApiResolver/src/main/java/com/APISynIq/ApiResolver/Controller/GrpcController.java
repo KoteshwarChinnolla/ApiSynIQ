@@ -4,20 +4,20 @@ import com.APISynIq.ApiResolver.Entity.EndpointDataEntity;
 import com.APISynIq.ApiResolver.Service.SynIqDataService;
 import com.apisyniq.grpc.*;
 import io.grpc.stub.StreamObserver;
-import org.springframework.stereotype.Service;
-
+import net.devh.boot.grpc.server.service.GrpcService;
 import java.util.List;
 
-@Service
-public class GrpcService extends ControllerGrpc.ControllerImplBase {
+@GrpcService
+public class GrpcController extends ControllerGrpc.ControllerImplBase {
     private final SynIqDataService synIqDataService;
-    public GrpcService(SynIqDataService synIqDataService) {
+    public GrpcController(SynIqDataService synIqDataService) {
         this.synIqDataService = synIqDataService;
     }
     @Override
     public void searchMatchesForBoth(query request,
                                      StreamObserver<InputsAndReturnsMatch> responseObserver) {
-        InputsAndReturnsMatch ans = synIqDataService.queryForBoth(query.newBuilder().getQuery());
+        String query = request.getQuery();
+        InputsAndReturnsMatch ans = synIqDataService.queryForBoth(query, request.getLimit());
         responseObserver.onNext(ans);
         responseObserver.onCompleted();
     }
@@ -25,8 +25,10 @@ public class GrpcService extends ControllerGrpc.ControllerImplBase {
     @Override
     public void searchMatchesForInputDescription(com.apisyniq.grpc.query request,
                                                  io.grpc.stub.StreamObserver<com.apisyniq.grpc.repeatedInput> responseObserver){
-        List<EndpointDataEntity> ans = synIqDataService.inputsDesMatch(query.newBuilder().getQuery());
-        repeatedInput res = repeatedInput.newBuilder().addAllInputs(ans.stream().map(EndpointDataEntity::toGrpcEndpointData).toList()).build();
+        String query = request.getQuery();
+        System.out.println(query);
+        List<EndpointData> ans = synIqDataService.inputsDesMatch(query, request.getLimit());
+        repeatedInput res = repeatedInput.newBuilder().addAllInputs(ans).build();
         responseObserver.onNext(res);
         responseObserver.onCompleted();
     }
@@ -34,8 +36,9 @@ public class GrpcService extends ControllerGrpc.ControllerImplBase {
     @Override
     public void searchMatchesForReturnDescription(com.apisyniq.grpc.query request,
                                                   io.grpc.stub.StreamObserver<com.apisyniq.grpc.repeatedInput> responseObserver){
-        List<EndpointDataEntity> ans = synIqDataService.inputsDesMatch(query.newBuilder().getQuery());
-        repeatedInput res = repeatedInput.newBuilder().addAllInputs(ans.stream().map(EndpointDataEntity::toGrpcEndpointData).toList()).build();
+        String query = request.getQuery();
+        List<EndpointData> ans = synIqDataService.returnDesMatch(query, request.getLimit());
+        repeatedInput res = repeatedInput.newBuilder().addAllInputs(ans).build();
         responseObserver.onNext(res);
         responseObserver.onCompleted();
     }

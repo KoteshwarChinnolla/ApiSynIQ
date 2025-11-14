@@ -17,4 +17,6 @@ public interface SynIqDataRepository extends JpaRepository<EndpointDataEntity, S
 
     @Query(value = "SELECT * FROM syniq_data WHERE return_description_embedding_id IN (:ids)", nativeQuery = true)
     List<EndpointDataEntity> findAllByReturnDescription(@Param("ids") List<Long> ids);
+
+
 }

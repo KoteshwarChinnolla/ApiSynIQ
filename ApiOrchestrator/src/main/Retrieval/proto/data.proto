@@ -63,6 +63,7 @@ message repeatedInput {
 
 message query{
   string query=1;
+  int32 limit=2;
 }
 
 service Controller {

@@ -34,7 +34,6 @@ import java.time.*;
 public class CalendarDto {
 
     @Describe(
-            name = "Calendar ID",
             description = "Unique identifier for the calendar record.",
             dataType = "Long",
             autoExecute = false,
@@ -43,7 +42,6 @@ public class CalendarDto {
     private Long id;
 
     @Describe(
-            name = "Date",
             description = "The date this calendar entry represents.",
             dataType = "LocalDate",
             autoExecute = false,
@@ -52,7 +50,6 @@ public class CalendarDto {
     private LocalDate date;
 
     @Describe(
-            name = "Employee ID",
             description = "Identifier of the employee for whom this calendar record applies.",
             dataType = "String",
             autoExecute = false,
@@ -61,7 +58,6 @@ public class CalendarDto {
     private String employeeId;
 
     @Describe(
-            name = "Effective Working Hours",
             description = "Total effective working duration after considering breaks and exceptions.",
             dataType = "Duration",
             autoExecute = false,
@@ -70,7 +66,6 @@ public class CalendarDto {
     private Duration effectiveHours;
 
     @Describe(
-            name = "Presence Status",
             description = "Indicates whether the employee was present, absent, or half-day.",
             dataType = "String",
             autoExecute = false,
@@ -79,7 +74,6 @@ public class CalendarDto {
     private String isPresent;
 
     @Describe(
-            name = "Event",
             description = "Event scheduled for the day, such as a meeting or training session.",
             dataType = "String",
             autoExecute = false,
@@ -88,7 +82,6 @@ public class CalendarDto {
     private String event;
 
     @Describe(
-            name = "Description",
             description = "Additional notes or summary for the day’s activities.",
             dataType = "String",
             autoExecute = false,
@@ -97,7 +90,6 @@ public class CalendarDto {
     private String description;
 
     @Describe(
-            name = "Day of Week",
             description = "Day of the week corresponding to this date.",
             dataType = "String",
             autoExecute = false,
@@ -106,7 +98,6 @@ public class CalendarDto {
     private String day;
 
     @Describe(
-            name = "Is Holiday",
             description = "Indicates whether the day is marked as a holiday.",
             dataType = "boolean",
             autoExecute = false,
@@ -115,7 +106,6 @@ public class CalendarDto {
     private boolean holiday;
 
     @Describe(
-            name = "Login Time",
             description = "The time when the employee logged in or checked in for work.",
             dataType = "LocalTime",
             autoExecute = false,
@@ -124,7 +114,6 @@ public class CalendarDto {
     private LocalTime login;
 
     @Describe(
-            name = "Logout Time",
             description = "The time when the employee logged out or checked out from work.",
             dataType = "LocalTime",
             autoExecute = false,
@@ -133,7 +122,6 @@ public class CalendarDto {
     private LocalTime logout;
 
     @Describe(
-            name = "Mode of Work",
             description = "Specifies whether the employee worked from office, home, or field.",
             dataType = "String",
             autoExecute = false,
@@ -142,7 +130,6 @@ public class CalendarDto {
     private String mode;
 
     @Describe(
-            name = "Gross Working Hours",
             description = "Total working hours before applying deductions.",
             dataType = "Duration",
             autoExecute = false,
@@ -151,7 +138,6 @@ public class CalendarDto {
     private Duration grossHours;
 
     @Describe(
-            name = "First Section Attendance",
             description = "Whether the employee was present in the first half of the day.",
             dataType = "Boolean",
             autoExecute = false,
@@ -160,7 +146,6 @@ public class CalendarDto {
     private Boolean firstSection;
 
     @Describe(
-            name = "Second Section Attendance",
             description = "Whether the employee was present in the second half of the day.",
             dataType = "Boolean",
             autoExecute = false,
@@ -169,7 +154,6 @@ public class CalendarDto {
     private Boolean secondSection;
 
     @Describe(
-            name = "Consider Present",
             description = "If true, marks the employee as present for attendance records even with exceptions.",
             dataType = "Boolean",
             autoExecute = false,

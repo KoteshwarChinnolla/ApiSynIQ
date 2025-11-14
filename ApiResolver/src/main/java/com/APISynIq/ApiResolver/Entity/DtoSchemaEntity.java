@@ -5,7 +5,9 @@ import java.util.*;
 import com.apisyniq.grpc.Describe;
 import com.apisyniq.grpc.DtoSchema;
 
+import com.apisyniq.grpc.EndpointData;
 import jakarta.persistence.*;
+import jakarta.websocket.Endpoint;
 import lombok.*;
 
 @AllArgsConstructor
@@ -31,20 +33,40 @@ public class DtoSchemaEntity {
     @JoinColumn(name = "dto_schema_id") // foreign key in DescribeEntity
     private List<DescribeEntity> fields;
 
+    @ManyToMany(mappedBy = "dtoSchemas") // inverse side
+    private Set<EndpointDataEntity> endpoints = new HashSet<>();
+
     public void grpcToEntity(DtoSchema dtoSchema) {
+        if (dtoSchema == null) {
+            this.className = null;
+            this.name = null;
+            this.description = null;
+            this.example = null;
+            this.fields = new ArrayList<>();
+            return;
+        }
+
         this.className = dtoSchema.getClassName();
         this.name = dtoSchema.getName();
         this.description = dtoSchema.getDescription();
         this.example = dtoSchema.getExample();
-        List<Describe> grpcDescribe = dtoSchema.getFieldsList();
-        List<DescribeEntity> grpcDtoSchema = new ArrayList<>();
-        for(Describe describeDto : grpcDescribe){
-            DescribeEntity describeFieldsEntity = new DescribeEntity();
-            describeFieldsEntity.grpcToEntity(describeDto);
-            grpcDtoSchema.add(describeFieldsEntity);
+
+        List<Describe> grpcDescribeList = dtoSchema.getFieldsList();
+        List<DescribeEntity> describeEntities = new ArrayList<>();
+
+        if (grpcDescribeList != null && !grpcDescribeList.isEmpty()) {
+            for (Describe describeDto : grpcDescribeList) {
+                if (describeDto != null) {
+                    DescribeEntity describeEntity = new DescribeEntity();
+                    describeEntity.grpcToEntity(describeDto);
+                    describeEntities.add(describeEntity);
+                }
+            }
         }
-        this.fields = grpcDtoSchema;
+
+        this.fields = describeEntities;
     }
+
 
     public DtoSchema toGrpcDtoSchema() {
         DtoSchema.Builder builder = DtoSchema.newBuilder()
@@ -56,7 +78,7 @@ public class DtoSchemaEntity {
         for (DescribeEntity field : this.fields) {
             builder.addFields(field.toGrpcDescribe());
         }
-        
+
         return builder.build();
     }
 }

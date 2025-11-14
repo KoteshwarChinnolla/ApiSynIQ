@@ -96,12 +96,12 @@ public class InputsEntity {
 
   public Inputs toGrpcInputs() {
     Inputs.Builder builder = Inputs.newBuilder();
-    builder.putAllInputBody(inputBody)
-            .putAllInputPathParams(inputPathParams)
-            .putAllInputQueryParams(inputQueryParams)
-            .putAllInputVariables(inputVariables)
-            .putAllInputHeaders(inputHeaders)
-            .putAllInputCookies(inputCookies);
+    builder.putAllInputBody(this.inputBody)
+            .putAllInputPathParams(this.inputPathParams)
+            .putAllInputQueryParams(this.inputQueryParams)
+            .putAllInputVariables(this.inputVariables)
+            .putAllInputHeaders(this.inputHeaders)
+            .putAllInputCookies(this.inputCookies);
     return builder.build();
   }
 }
