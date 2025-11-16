@@ -1,8 +1,14 @@
 import json
+from typing import Any, List, Optional, Literal
+from pydantic import BaseModel, Field
 from Retrieval.FetchApi import FetchApi
 from Retrieval.data_pb2 import query
-from typing import Annotated, Literal, List, Any, Optional
-from pydantic import BaseModel, Field
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Dict
+import threading
+import time
+
+# Java to Python type mapping
 
 PY_TYPE_MAP = {
     "int": "int",
@@ -11,267 +17,331 @@ PY_TYPE_MAP = {
     "float": "float",
     "double": "float",
     "long": "int",
-    "LocalDate": "str",        # or `datetime.date` if needed
+    "LocalDate": "str",
     "LocalDateTime": "str",
 }
-class params():
-    value: Any
-class ReturnInputs():
-    inputBody : Any
-    inputPathParams : List[Any]
-    inputQueryParams : List[Any] 
-    inputVariables : List[Any] 
-    inputHeaders : List[Any] 
-    inputCookies : List[Any] 
 
-class GeneratePydantic():
-    Object : Any
-    def __init__(self):
-        self.fetchApi = FetchApi()
 
-    def BuildPydantic(self):
-        inputs = self.Object.inputs
+# Input structure for generated Pydantic classes
+
+class ReturnInputs:
+    inputBody: Any = None
+    inputPathParams: Any = None
+    inputQueryParams: Any = None
+    inputVariables: Any = None
+    inputHeaders: Any = None
+    inputCookies: Any = None
+
+
+# The python Object to hold all inputs and metadata, it is finally returned as the class output
+
+class Inputs:
+    name: str
+    endpoint: str
+    httpMethod: str
+    description: str
+    returnDescription: str
+    autoExecute: bool
+    input: ReturnInputs
+    output: Any
+    globalPath: str
+    markDown: str
+
+
+
+class GeneratePydantic:
+
+    def __init__(self, max_workers: int = 10):
+
+        self.fetchApi = FetchApi() # Initialize FetchApi instance, this is about Grpc connection and data retreval
+        self._class_cache = {} # Cache for generated Pydantic classes, to avoid redundant generation
+        self._cache_lock = threading.Lock() # Lock for thread-safe cache access
+        self._section_executor = ThreadPoolExecutor(max_workers=max_workers) # Executor for concurrent section processing
+
+
+
+    def _process_section(self, section, sectionDescribe, target_attr, schemas, gen_inputs):
+        """
+        Generic handler for input sections such as:
+        - Path Params
+        - Query Params
+        - Headers
+        - Variables
+        """
+        if not (section and sectionDescribe):
+            return
+
+        section_refs = list(sectionDescribe.keys())
+
+        if not section_refs:
+            print(f"No keys found in describe for {target_attr}")
+            return
+
+        # Create cache key using ALL keys (sorted for determinism)
+        # cache_key = f"{target_attr}:{','.join(sorted(map(str, section_refs)))}"
+
+        # # Return cached class if exists
+        # with self._cache_lock:
+        #     if cache_key in self._class_cache:
+        #         clazz = self._class_cache[cache_key]
+        #         setattr(gen_inputs, target_attr, clazz)
+        #         return
+
+        fields_list = []
+        for ref in section_refs:
+            schema = schemas.get(str(ref), None)
+            if schema is None:
+                print(f"Schema not found for section key: {ref}")
+                continue
+            fields_list.append(schema)
+
+        if not fields_list:
+            print(f"No valid schemas found for section: {target_attr}")
+            return
+
+        # Build Describe object with ALL fields
+        des = {
+            "name": target_attr,
+            "description": None,
+            "fields": tuple(fields_list)
+        }
+
+        # Generate class
+        _, clazz = self.generate_pydantic_class(des)
+
+        # Cache it
+        # with self._cache_lock:
+        #     self._class_cache[cache_key] = clazz
+
+        setattr(gen_inputs, target_attr, clazz)
+        return
+
+    def pydanticForBody(self, bodyData, DtoSchemas):
+        """
+        Create Pydantic class for request body.
+        """
+
+        if not bodyData:
+            return None
+
+        try:
+            body_ref = json.loads(list(bodyData.items())[0][1])
+        except:
+            return None
+
+        body_schema = DtoSchemas.get(str(body_ref), None)
+        if not body_schema:
+            return None
+
+        _, clazz = self.generate_pydantic_class(body_schema)
+        del body_schema
+        return clazz
+
+
+    def BuildPydanticForInputs(self, obj) -> ReturnInputs:
+        Object = obj
         gen_inputs = ReturnInputs()
-        DtoSchemas = self.Object.dtoSchemas or {}
-        inputBody = inputs.inputBody
-        inputPathParams = inputs.inputPathParams
-        inputQueryParams = inputs.inputQueryParams
-        inputVariables = inputs.inputVariables
-        inputHeaders = inputs.inputHeaders
-        inputCookies = inputs.inputCookies
-        outputBody = self.Object.outputBody
-        inputDescribe = self.Object.inputsDescribe
-        inputBodyDescribe = inputDescribe.inputBody
-        inputPathParamsDescribe = inputDescribe.inputPathParams 
-        inputQueryParamsDescribe = inputDescribe.inputQueryParams
-        inputVariablesDescribe = inputDescribe.inputVariables
-        inputHeadersDescribe = inputDescribe.inputHeaders
-        inputCookiesDescribe = inputDescribe.inputCookies
         
-        if(inputBody and inputBodyDescribe):
-            inputBody = json.loads(list(inputBody.items())[0][1])
-            inputBodyRef = json.loads(list(inputBodyDescribe.items())[0][1])
-            inputBodyDescribe = DtoSchemas.get(str(inputBodyRef), {})
-            model_cls, code = self.generate_pydantic_class(inputBodyDescribe)
-            gen_inputs.inputBody = model_cls
+        inputs = Object.inputs
+        describe = Object.inputsDescribe
+        paramSchemas = Object.describeDtosForParms
+        schemas = Object.dtoSchemas
+        tasks = []
 
+        def task_runner(section, sectionDescribe, target_attr):
+            tmp_gen = ReturnInputs()
+            self._process_section(section, sectionDescribe, target_attr, paramSchemas, tmp_gen)
+            # print(f"Completed processing for {target_attr} and waiting to return... {threading.current_thread().name}")
+            # time.sleep(5)
+            return target_attr, getattr(tmp_gen, target_attr)
 
-        # if(inputPathParams and inputPathParamsDescribe):
-        #     inputPathParams = json.loads(list(inputPathParams.items())[0][1])
-        #     inputPathParamsRef = json.loads(list(inputPathParamsDescribe.items())[0][1])
-        #     inputPathParamsDescribe = DtoSchemas.get(str(inputPathParamsRef), {})
-        #     model_cls, code = self.generate_pydantic_class(inputPathParamsDescribe)
-        #     inputs.inputPathParams = model_cls
+        exe = self._section_executor
+        futures = [
+            exe.submit(task_runner, inputs.inputPathParams, describe.inputPathParams, "inputPathParams"),
+            exe.submit(task_runner, inputs.inputQueryParams, describe.inputQueryParams, "inputQueryParams"),
+            exe.submit(task_runner, inputs.inputVariables, describe.inputVariables, "inputVariables"),
+            exe.submit(task_runner, inputs.inputHeaders, describe.inputHeaders, "inputHeaders"),
+            exe.submit(task_runner, inputs.inputCookies, describe.inputCookies, "inputCookies"),
+        ]
 
-        # if(inputQueryParams and inputQueryParamsDescribe):
-        #     inputQueryParams = json.loads(list(inputQueryParams.items())[0][1])
-        #     inputQueryParamsRef = json.loads(list(inputQueryParamsDescribe.items())[0][1])
-        #     inputQueryParamsDescribe = DtoSchemas.get(str(inputQueryParamsRef), {})
-        #     model_cls, code = self.generate_pydantic_class(inputQueryParamsDescribe)
-        #     inputs.inputQueryParams = model_cls
+        for f in as_completed(futures):
+            target_attr, value = f.result()
+            setattr(gen_inputs, target_attr, value)
 
-        # if(inputVariables and inputVariablesDescribe):
-        #     inputVariables = json.loads(list(inputVariables.items())[0][1])
-        #     inputVariablesRef = json.loads(list(inputVariablesDescribe.items())[0][1])
-        #     inputVariablesDescribe = DtoSchemas.get(str(inputVariablesRef), {})
-        #     model_cls, code = self.generate_pydantic_class(inputVariablesDescribe)
-        #     inputs.inputVariables = model_cls
-
-        # if(inputHeaders and inputHeadersDescribe):  
-        #     inputHeaders = json.loads(list(inputHeaders.items())[0][1])
-        #     inputHeadersRef = json.loads(list(inputHeadersDescribe.items())[0][1])
-        #     inputHeadersDescribe = DtoSchemas.get(str(inputHeadersRef), {})
-        #     model_cls, code = self.generate_pydantic_class(inputHeadersDescribe)
-        #     inputs.inputHeaders = model_cls
-
-        # if(inputCookies and inputCookiesDescribe):
-        #     inputCookies = json.loads(list(inputCookies.items())[0][1])
-        #     inputCookiesRef = json.loads(list(inputCookiesDescribe.items())[0][1])
-        #     inputCookiesDescribe = DtoSchemas.get(str(inputCookiesRef), {})
-        #     model_cls, code = self.generate_pydantic_class(inputCookiesDescribe)
-        #     inputs.inputCookies = model_cls
         return gen_inputs
 
-    def generate_pydantic_class(self,dto):
-        print("dto: ", dto)
-        class_name = dto.name
-        fields = dto.fields
 
-        lines = []
+    def generate_pydantic_class(self, dto):
+        """
+        Converts DTO schema → Pydantic class dynamically using exec().
+        """
+
+        if isinstance(dto, dict):
+            class_name = dto.get("name") or "GeneratedClass"
+            fields = dto.get("fields") or []
+            description = dto.get("description", "")
+        else:
+            class_name = getattr(dto, "name", None) or "GeneratedClass"
+            fields = getattr(dto, "fields", None) or []
+            description = getattr(dto, "description", "")
+
+        with self._cache_lock:
+            if class_name in self._class_cache:
+                return None, self._class_cache[class_name]
+            
+            if len(self._class_cache) > 300:
+                self._class_cache.clear()
+
+
         imports = [
             "from pydantic import BaseModel, Field",
             "from typing import Optional, List, Literal",
         ]
+        lines = [f"class {class_name}(BaseModel):"]
 
-        # Start class
-        lines.append(f"class {class_name}(BaseModel):")
-        lines.append(f"    \"\"\"{dto.description.strip()}\"\"\"")
+        if description:
+            lines.append(f'    """{description.strip()}"""')
 
         for f in fields:
-            fname = f.name or ""
+            fname = f.name
             dtype_raw = f.dataType or "string"
             description = f.description or ""
-            example = f.example or ""
-            default = f.defaultValue or "null"
-            options = f.options or []
+            default_value = f.defaultValue or "null"
+            options = f.options or ""
 
-            # Convert type name
+            # Type mapping
             py_type = PY_TYPE_MAP.get(dtype_raw, "str")
 
-            # Literal support if options exist (comma-separated)
             if options:
                 opts = [o.strip() for o in options.split(",")]
-                literal_list = ", ".join([f'"{o}"' for o in opts])
-                py_type = f"Literal[{literal_list}]"
+                literal_values = ", ".join([f'"{o}"' for o in opts])
+                py_type = f"Literal[{literal_values}]"
 
-            # Compose Field(...)
-            field_params = []
-            if description:
-                field_params.append(f'description="{description}"')
-            if example:
+            # Default
+            if default_value not in ("", None, "null"):
                 try:
-                    example_val = json.loads(example)
+                    default_parsed = json.loads(default_value)
                 except:
-                    example_val = example
-                # field_params.append(f"example={repr(example_val)}")
-
-            if default not in (None, "", "null"):
-                try:
-                    default_val = json.loads(default)
-                except:
-                    default_val = default
-                default_code = repr(default_val)
+                    default_parsed = default_value
+                default_code = repr(default_parsed)
             else:
                 default_code = "None"
                 py_type = f"Optional[{py_type}]"
 
+            field_params = []
+            if description:
+                field_params.append(f'description="{description}"')
+
             field_code = f"Field({default_code}, {', '.join(field_params)})"
-            example = f"# Example: {example or ''}"
+            lines.append(f"    {fname}: {py_type} = {field_code}")
 
-            lines.append(f"    {fname}: {py_type} = {field_code} {example}")
-
-        # Join everything
         class_code = "\n".join(imports) + "\n\n" + "\n".join(lines)
 
-        # Execute to get actual class object
+        # Execute class
         local_vars = {}
-        # print("class_code: ", class_code)
-        exec(class_code, globals(), local_vars)
+        exec(class_code, {"BaseModel": BaseModel, "Field": Field, "Literal": Literal, "Optional": Optional, "List": List}, local_vars)
         clazz = local_vars[class_name]
 
+        with self._cache_lock:
+            self._class_cache[class_name] = clazz
+
         return class_code, clazz
-    
-    def TransformToMarkDown(self):
-        name = self.Object.name
-        endpoint = self.Object.endpoint
-        httpMethod = self.Object.httpMethod
-        description = self.Object.description
-        returnDescription = self.Object.returnDescription
-        autoExecute = self.Object.autoExecute
-
-        inputs = self.Object.inputs
-        outputBody = self.Object.outputBody
-
-        inputBody = inputs.inputBody
-        inputPathParams = inputs.inputPathParams
-        inputQueryParams = inputs.inputQueryParams
-        inputVariables = inputs.inputVariables
-        inputHeaders = inputs.inputHeaders
-        inputCookies = inputs.inputCookies
 
 
-        markdown = f"""# {name}
+    def TransformToMarkDown(self, obj) -> str:
 
-    **Method:** `{httpMethod}`  **Endpoint:** `{endpoint}`  
+        inputs = obj.inputs
+        md = []
+
+        md.append(f"# {obj.name}")
+        md.append(f"**Method:** `{obj.httpMethod}`  **Endpoint:** `{obj.endpoint}`")
+        md.append(f"**Auto Execute:** `{obj.autoExecute}`")
+        md.append("---")
+        md.append("## ⚙️ Inputs")
+        md.append(f"**Description:** {obj.description}")
+
+        # Helper for repeating param blocks
+        def add_param_block(title, data):
+            if not data:
+                return
+            md.append(f"\n### 🔸 {title}\n")
+            for k, v in data.items():
+                md.append(f"{k}: {v}")
+
+        add_param_block("Path Parameters", inputs.inputPathParams)
+        add_param_block("Query Parameters", inputs.inputQueryParams)
+        add_param_block("Variables", inputs.inputVariables)
+        add_param_block("Headers", inputs.inputHeaders)
+        add_param_block("Cookies", inputs.inputCookies)
+
+        # Body
+        if inputs.inputBody:
+            json_str = list(inputs.inputBody.items())[0][1]
+            pretty = json.dumps(json.loads(json_str), indent=4, ensure_ascii=False)
+            md.append("\n### 🔸 Request Body\n```json")
+            md.append(pretty)
+            md.append("```\n---")
+
+        # Response
+        md.append("\n## 📦 Response")
+        if obj.returnDescription:
+            md.append(f"**Description:** {obj.returnDescription}")
+
+        if obj.outputBody:
+            pretty_out = json.dumps(json.loads(obj.outputBody), indent=4, ensure_ascii=False)
+            md.append("\n### 🔸 Response Body\n```json")
+            md.append(pretty_out)
+            md.append("```")
+
+        return "\n".join(md)
 
 
-    **Is it has to be executed automatically:** `{autoExecute}`  
+    def Fetch(self, q: query) -> Dict[str, Inputs]:
+        results: Dict[str, Inputs] = {}
 
-    ---
+        objects = self.fetchApi.searchMatchesForInputDescription(q)
 
-    ## ⚙️ Inputs
-
-    **Description:** {description}  
-    """
-
-
-        if inputPathParams:
-            markdown += """
-    ### 🔸 Path Parameters
-    """
-            for key, value in list(inputPathParams.items()):
-                markdown += f" {key} : {value} \n"
-
-        if inputQueryParams:
-            markdown += """
-    ### 🔸 Query Parameters
-    """
-            for key, value in list(inputQueryParams.items()):
-                markdown += f" {key} : {value} \n"
+        items = list(objects.inputs)
+        if not items:
+            return results
         
-        if inputVariables:
-            markdown += """
-    ### 🔸 Variables
-    """
-            for key, value in list(inputVariables.items()):
-                markdown += f" {key} : {value} \n"
+        max_workers = min(len(items), 32)
+        future_to_meta = {}
 
-        if inputHeaders:
-            markdown += """
-    ### 🔸 Headers
-    """
-            for key, value in list(inputHeaders.items()):
-                markdown += f" {key} : {value} \n"
+        with ThreadPoolExecutor(max_workers=max_workers) as exe:
+            for item in items:
+                fut_inp = exe.submit(self.BuildPydanticForInputs, item)
+                fut_md = exe.submit(self.TransformToMarkDown, item)
+                fut_out = exe.submit(self.pydanticForBody, getattr(item, "responseBody", None), getattr(item, "dtoSchemas", {}) or {})
 
-        if inputCookies:
-            markdown += """
-    ### 🔸 Cookies
-    """
-            for key, value in list(inputCookies.items()):
-                markdown += f" {key} : {value} \n"
+                future_to_meta[fut_inp] = (item, "input")
+                future_to_meta[fut_md] = (item, "markdown")
+                future_to_meta[fut_out] = (item, "output")
 
-        if inputBody:
-            json_str = list(inputBody.items())[0][1]
-            parsed = json.loads(json_str)
-            inputBody_pretty = json.dumps(parsed, indent=4, ensure_ascii=False)
-            markdown += f"""
-    ### 🔸 Request Body
-    ```json
-    {inputBody_pretty}
-    ```
-    ---
-    """
-        markdown += """
-    ## 📦 Response
-    """
+        intermediate_results = {}
+        for future in as_completed(future_to_meta):
+            item, meta_type = future_to_meta[future]
+            name = item.name
+            if name not in intermediate_results:
+                intermediate_results[name] = {"item": item, "input": None, "markdown": None, "output": None}
+            intermediate_results[name][meta_type] = future.result()
 
-        if returnDescription:
-            markdown += f"""
-    **Description**: {returnDescription}
-    """
-            
-        if outputBody:
-            outputBody = outputBody
-            parsed_output = json.loads(outputBody)
-            outputBody_pretty = json.dumps(parsed_output, indent=4, ensure_ascii=False)
-            markdown += f"""
-    ### 🔸 Response Body
-    ```json
-    {outputBody_pretty}
-    ```
-    """
-        return markdown
+        for item in items:
+            result = Inputs()
+            result.markDown = intermediate_results[item.name]["markdown"]
+            result.input = intermediate_results[item.name]["input"]
+            result.output = intermediate_results[item.name]["output"]
+            result.globalPath = item.globalPath
+            result.name = item.name
+            result.endpoint = item.endpoint
+            result.httpMethod = item.httpMethod
+            result.description = item.description
+            result.returnDescription = item.returnDescription
+            result.autoExecute = item.autoExecute
+            results[item.name] = result
+        return results
 
-    def Fetch(self, query: query):
-        ListOfObjects = self.fetchApi.searchMatchesForInputDescription(query)
-        for repeated in ListOfObjects.inputs:
-            self.Object = repeated
-            self.BuildPydantic()
-            mark_down = self.TransformToMarkDown()
-        return mark_down
-
-
-query = query(query="Attendance post and get", limit=2)
-gen = GeneratePydantic()
-mark_down = gen.Fetch(query)
-print("Done")
+# query = query(query="Attendance post and get", limit=2)
+# gen = GeneratePydantic()
+# output = gen.Fetch(query)
+# print(output)

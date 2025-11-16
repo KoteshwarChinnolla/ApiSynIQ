@@ -8,4 +8,6 @@ dependencies = [
     "grpcio>=1.76.0",
     "grpcio-tools>=1.76.0",
     "pydantic>=2.12.4",
+    "pydict2class>=0.0.1",
+    "requests>=2.32.5",
 ]
