@@ -72,4 +72,5 @@ service Controller {
   rpc searchMatchesForInputDescription(query) returns (repeatedInput);
   rpc searchMatchesForReturnDescription(query) returns (repeatedInput);
   rpc save(EndpointData) returns (query);
+  rpc saveAll(repeatedInput) returns (query);
 }

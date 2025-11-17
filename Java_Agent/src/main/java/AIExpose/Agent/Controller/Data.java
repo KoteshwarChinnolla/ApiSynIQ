@@ -14,6 +14,7 @@ import java.util.Map;
 import AIExpose.Agent.Stub.GrpcConnectionManager;
 import com.apisyniq.grpc.ControllerGrpc;
 import com.apisyniq.grpc.query;
+import com.apisyniq.grpc.repeatedInput;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
@@ -78,6 +79,7 @@ public class Data {
     public String saveAll() throws JsonProcessingException {
         String[] beanNames = applicationContext.getBeanDefinitionNames();
         ControllerGrpc.ControllerBlockingStub stub = grpcConnectionManager.getStub();
+        List<com.apisyniq.grpc.EndpointData>  endpoints = new ArrayList<>();
         for (String beanName : beanNames) {
             Object bean = applicationContext.getBean(beanName);
             RestController RestControllerAnnotation = bean.getClass().getAnnotation(RestController.class);
@@ -87,14 +89,15 @@ public class Data {
                 for (Method method : bean.getClass().getDeclaredMethods()) {
                     AIExposeEpHttp epAnnotation = method.getAnnotation(AIExposeEpHttp.class);
                     EndpointData schema = endpointScanner.before(method, epAnnotation, aiExposeController);
-
-                    query query = stub.save(schema.toGrpcEndpointData());
-                    System.out.println(query);
+                    endpoints.add(schema.toGrpcEndpointData());
+//                    query query = stub.save(schema.toGrpcEndpointData());
+//                    System.out.println(query);
                 }
             }
         }
+        repeatedInput r = repeatedInput.newBuilder().addAllInputs(endpoints).build();
+        System.out.println(endpoints);
+        query query = stub.saveAll(r);
         return "Done with saving";
     }
-
-
 }

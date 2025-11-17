@@ -51,4 +51,12 @@ public class GrpcController extends ControllerGrpc.ControllerImplBase {
         responseObserver.onCompleted();
     }
 
+    @Override
+    public void saveAll(com.apisyniq.grpc.repeatedInput request,
+            io.grpc.stub.StreamObserver<com.apisyniq.grpc.query> responseObserver){
+        synIqDataService.saveAll(request.getInputsList());
+        responseObserver.onNext(query.newBuilder().setQuery("Done with saving").build());
+        responseObserver.onCompleted();
+    }
+
 }

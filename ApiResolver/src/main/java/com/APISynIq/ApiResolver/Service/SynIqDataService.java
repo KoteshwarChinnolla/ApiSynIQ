@@ -4,7 +4,6 @@ import com.APISynIq.ApiResolver.Entity.DescriptionEmbeddingEntity;
 import com.APISynIq.ApiResolver.Repository.EmbdRepo;
 import com.apisyniq.grpc.EndpointData;
 import com.apisyniq.grpc.InputsAndReturnsMatch;
-import org.hibernate.Hibernate;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.scheduling.annotation.Async;
@@ -15,7 +14,6 @@ import com.APISynIq.ApiResolver.Repository.SynIqDataRepository;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
@@ -40,6 +38,20 @@ public class SynIqDataService {
     public float[] generateEmbedding(String input) {
         return embeddingModel.embed(input);
     }
+
+    @Transactional
+    public void saveAll(List<EndpointData> AllData) {
+        List<String> Ids = repository.findAllIds();
+        for (EndpointData data : AllData) {
+            String generatedId = String.format("%s-%s", data.getHttpMethod(), data.getEndpoint());
+            save(data);
+            if (Ids.contains(generatedId)) {
+                Ids.remove(generatedId);
+            }
+        }
+        for (String id:Ids) repository.deleteById(id);
+    }
+
     @Async
     @Transactional
     public CompletableFuture<EndpointDataEntity> save(EndpointData data) {
@@ -60,7 +72,7 @@ public class SynIqDataService {
                     endpointDataEntity.setInputDescriptionEmbedding(saved);
                 }
             } catch (Exception e) {
-                e.printStackTrace(); // optionally use logger
+                e.printStackTrace();
             }
         });
 

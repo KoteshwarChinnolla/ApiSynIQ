@@ -59,12 +59,12 @@ public class AttendanceController {
             description = "Deletes an attendance summary record for a specific date.",
             autoExecute = true,
             tags = {"Attendance", "Delete", "Summary"},
-            reqParams = @Describe(name = "date", description = "Date whose attendance summary should be deleted.", dataType = "String", example = "2025-11-09"),
+            pathParams = {@Describe(name = "date", description = "Date whose attendance summary should be deleted.", dataType = "String", example = "2025-11-09"), @Describe(name = "id", description = "Id whose attendance summary should be deleted.", dataType = "String", example = "ACS0000001")},
             returnDescription = "Returns confirmation of the deleted attendance record."
     )
-    @DeleteMapping("/summary")
-    public ResponseEntity<String> deleteSummary(@RequestParam String date) {
-        return ResponseEntity.ok("Attendance summary for " + date + " deleted successfully.");
+    @DeleteMapping("/summary/{id}/{date}")
+    public ResponseEntity<String> deleteSummary(@PathVariable String date, @PathVariable String id) {
+        return ResponseEntity.ok("Attendance summary for " + date +  id + " deleted successfully.");
     }
 }
 

@@ -57,7 +57,8 @@ public class EndpointDataEntity {
 
     @Column(columnDefinition = "TEXT")
   private String outputBody;
-
+    @Column(name = "global_path")
+    private String globalPath;
 
   @ElementCollection
   @CollectionTable(name = "syniq_filtering_tags", joinColumns = @JoinColumn(name = "syniq_id"))
@@ -98,7 +99,7 @@ public class EndpointDataEntity {
         this.autoExecute = inputData.getAutoExecute();
         this.outputBody = inputData.getOutputBody();
         this.responseBody = inputData.getResponseBody();
-
+        this.globalPath = inputData.getGlobalPath();
         if (this.inputsDescribe == null) {
             this.inputsDescribe = new InputsEntity();
         }
@@ -149,8 +150,8 @@ public class EndpointDataEntity {
         .setInputs(this.inputs != null ? this.inputs.toGrpcInputs() : null)
         .setOutputBody(this.outputBody != null ? this.outputBody : null)
         .addAllFilteringTags(this.filteringTags != null ? this.filteringTags : Collections.emptyList())
-        .setResponseBody(this.responseBody != null ? this.responseBody : null);
-
+        .setResponseBody(this.responseBody != null ? this.responseBody : null)
+            .setGlobalPath(this.globalPath != null ? this.globalPath : "");
       for (Map.Entry<String, DtoSchemaEntity> entry : this.dtoSchemas.entrySet()) {
           builder.putDtoSchemas(entry.getKey(), entry.getValue().toGrpcDtoSchema());
       }

@@ -36,10 +36,10 @@ public class LeavesController {
             returnDescription = "Returns the complete details of the leave with the provided ID."
     )
     @GetMapping("/{id}")
-    public ResponseEntity<LeavesDto> getLeave(@PathVariable Long id) {
+    public ResponseEntity<LeavesDto> getLeave(@PathVariable Long id, @RequestParam Long employeeId) {
         LeavesDto leave = new LeavesDto();
         leave.setId(id);
-        leave.setEmployeeId(1001L);
+        leave.setEmployeeId(employeeId);
         leave.setDetails("Sick leave for two days");
         return ResponseEntity.ok(leave);
     }

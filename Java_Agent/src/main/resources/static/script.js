@@ -30,7 +30,7 @@ async function connectToApi() {
 
   statusEl.textContent = "Connecting...";
   try {
-    const res = await fetch(`${apiUrl}/active`);
+    const res = await fetch(`${apiUrl}/SynIq/api/active`);
     const text = await res.text();
     if (text === "true") {
       statusEl.textContent = "✅ Connected to API Resolver";

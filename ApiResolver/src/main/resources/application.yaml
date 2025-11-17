@@ -1,10 +1,10 @@
 grpc:
     server:
-        port: 7322
+        port: ${GRPC_PORT:7322}
         enable-reflection: true
 server:
-  address: 0.0.0.0
-  port: 7321
+  address: ${SERVER_ADDRESS:0.0.0.0}
+  port: ${SERVER_PORT:7321}
 
 spring:
   import:
@@ -27,11 +27,11 @@ spring:
     vectorstore:
       pgvector:
         initialize-schema: true
-        dimensions: 768
-        index-type: hnsw
+        dimensions: ${VECTOR_STORE_DISMENSIONS:768}
+        index-type: ${VECTOR_STORE_INDEX_TYPE:hnsw}
         schema-validation: true
   datasource:
-    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/apis}
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/spring}
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:koti21}
     driver-class-name: org.postgresql.Driver
@@ -40,4 +40,4 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: ${HIBERNATE_AUTO:update}
+      ddl-auto: ${HIBERNATE_AUTO:create}

@@ -48,7 +48,7 @@ public class EndpointData {
 
         this.tags = inputData.getTagsList().toArray(new String[0]);
         this.filteringTags = new ArrayList<>(inputData.getFilteringTagsList());
-
+        this.globalPath = inputData.getGlobalPath();
         Map<String, com.apisyniq.grpc.DtoSchema> dtoSchemas = inputData.getDtoSchemasMap();
         if (this.dtoSchemas == null) {
             this.dtoSchemas = new HashMap<>();
@@ -86,8 +86,8 @@ public class EndpointData {
                 .setInputs(this.inputs != null ? this.inputs.toGrpcInputs() : null)
                 .setOutputBody(this.outputBody != null ? this.outputBody : null)
                 .addAllFilteringTags(this.filteringTags != null ? this.filteringTags : Collections.emptyList())
-                .setResponseBody(this.responseBody != null ? this.responseBody : null);
-
+                .setResponseBody(this.responseBody != null ? this.responseBody : null)
+                .setGlobalPath(this.globalPath != null ? this.globalPath : "");
         for (Map.Entry<String, DtoSchema> entry : this.dtoSchemas.entrySet()) {
             builder.putDtoSchemas(entry.getKey(), entry.getValue().toGrpcDtoSchema());
         }
