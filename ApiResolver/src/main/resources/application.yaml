@@ -1,37 +1,36 @@
 grpc:
     server:
         port: ${GRPC_PORT:7322}
-        enable-reflection: true
+        enable-reflection: ${GRPC_ENABLE_REFECTION:false}
 server:
-  address: ${SERVER_ADDRESS:0.0.0.0}
-  port: ${SERVER_PORT:7321}
-
+  address: ${RESOLVER_SERVER_ADDRESS:0.0.0.0}
+  port: ${RESOLVER_SERVER_PORT:7321}
 spring:
-  import:
-    optional:
-      file: .env[.properties]
+  config:
+    import:
+    - optional:file:.env[.properties]
   application:
     name: ApiResolver
   ai:
     ollama:
       base-url: ${OLLAMA_SERVER:http://localhost:11434}
       init:
-        pull-model-strategy: when_missing
-        timeout: ${TIME_OUT:10000}
+        pull-model-strategy: ${OLLAMA_PULL_STRATEGY:when_missing}
+        timeout: ${OLLAMA_TIME_OUT:10000}
       chat:
         options:
-          model: ${CHAT_MODEL:tinydolphin}
+          model: ${OLLAMA_CHAT_MODEL:tinydolphin}
       embedding:
         options:
-           model: ${EMBEDDINGS_MODEL:nomic-embed-text}
+           model: ${OLLAMA_EMBEDDINGS_MODEL:nomic-embed-text}
     vectorstore:
       pgvector:
-        initialize-schema: true
-        dimensions: ${VECTOR_STORE_DISMENSIONS:768}
-        index-type: ${VECTOR_STORE_INDEX_TYPE:hnsw}
-        schema-validation: true
+        initialize-schema: ${PGVECTOR_INITIALIZE_SCHEMS:true}
+        dimensions: ${PGVECTOR_VECTOR_STORE_DISMENSIONS:768}
+        index-type: ${PGVECTOR_VECTOR_STORE_INDEX_TYPE:hnsw}
+        schema-validation: ${PGVECTOR_SCHEMA_VALIDATION:true}
   datasource:
-    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/spring}
+    url: ${POSTGRES_URL}
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:koti21}
     driver-class-name: org.postgresql.Driver

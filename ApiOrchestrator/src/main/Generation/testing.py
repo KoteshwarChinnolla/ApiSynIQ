@@ -25,7 +25,8 @@ def inspect_model(model):
 
 attrs = {"inputBody", "inputPathParams", "inputQueryParams", "inputVariables", "inputHeaders", "inputCookies"}
 
-query = query(query="Deletes an attendance summary record for a specific date.", limit=1)
+query = query(query="get calender details", limit=2)
+
 gen = GeneratePydantic()
 output = gen.Fetch(query)
 for key, value in output.items():

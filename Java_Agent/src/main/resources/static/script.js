@@ -75,10 +75,10 @@ async function runQuery() {
 
   const promises = [];
   if (useInput) {
-    promises.push(callEndpoint(`${baseUrl}/searchMatchesForInputDescrition`, payload, "InputDescription"));
+    promises.push(callEndpoint(`${baseUrl}/SynIq/api/searchMatchesForInputDescrition`, payload, "InputDescription"));
   }
   if (useReturn) {
-    promises.push(callEndpoint(`${baseUrl}/searchMatchesForReturnDescription`, payload, "ReturnDescription"));
+    promises.push(callEndpoint(`${baseUrl}/SynIq/api/searchMatchesForReturnDescription`, payload, "ReturnDescription"));
   }
 
   await Promise.all(promises);

@@ -2,7 +2,8 @@ import json
 from typing import Any, List, Optional, Literal
 from pydantic import BaseModel, Field
 from Retrieval.FetchApi import FetchApi
-from Retrieval.data_pb2 import query
+from Retrieval.data_pb2 import query, Inputs
+from Retrieval import data_pb2
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Dict
 import threading
@@ -32,6 +33,20 @@ class ReturnInputs:
     inputHeaders: Any = None
     inputCookies: Any = None
 
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
+    def grpcToReturnInputs(self, inputs: data_pb2.Inputs):
+        return ReturnInputs(
+            inputBody=inputs.inputBody,
+            inputPathParams=inputs.inputPathParams,
+            inputQueryParams=inputs.inputQueryParams,
+            inputVariables=inputs.inputVariables,
+            inputHeaders=inputs.inputHeaders,
+            inputCookies=inputs.inputCookies,
+        )
+
 
 # The python Object to hold all inputs and metadata, it is finally returned as the class output
 
@@ -46,6 +61,7 @@ class Inputs:
     output: Any
     globalPath: str
     markDown: str
+    example: ReturnInputs
 
 
 
@@ -77,16 +93,6 @@ class GeneratePydantic:
             print(f"No keys found in describe for {target_attr}")
             return
 
-        # Create cache key using ALL keys (sorted for determinism)
-        # cache_key = f"{target_attr}:{','.join(sorted(map(str, section_refs)))}"
-
-        # # Return cached class if exists
-        # with self._cache_lock:
-        #     if cache_key in self._class_cache:
-        #         clazz = self._class_cache[cache_key]
-        #         setattr(gen_inputs, target_attr, clazz)
-        #         return
-
         fields_list = []
         for ref in section_refs:
             schema = schemas.get(str(ref), None)
@@ -109,9 +115,6 @@ class GeneratePydantic:
         # Generate class
         _, clazz = self.generate_pydantic_class(des)
 
-        # Cache it
-        # with self._cache_lock:
-        #     self._class_cache[cache_key] = clazz
 
         setattr(gen_inputs, target_attr, clazz)
         return
@@ -120,20 +123,17 @@ class GeneratePydantic:
         """
         Create Pydantic class for request body.
         """
-
         if not bodyData:
             return None
-
         try:
             body_ref = json.loads(list(bodyData.items())[0][1])
         except:
             return None
-
         body_schema = DtoSchemas.get(str(body_ref), None)
         if not body_schema:
             return None
-
         _, clazz = self.generate_pydantic_class(body_schema)
+        print(f"Generated Pydantic class for body: {clazz}")
         del body_schema
         return clazz
 
@@ -150,13 +150,17 @@ class GeneratePydantic:
 
         def task_runner(section, sectionDescribe, target_attr):
             tmp_gen = ReturnInputs()
-            self._process_section(section, sectionDescribe, target_attr, paramSchemas, tmp_gen)
+            if target_attr == "inputBody":
+                tmp_gen.inputBody = self.pydanticForBody(section, sectionDescribe)
+            else:
+                self._process_section(section, sectionDescribe, target_attr, paramSchemas, tmp_gen)
             # print(f"Completed processing for {target_attr} and waiting to return... {threading.current_thread().name}")
             # time.sleep(5)
             return target_attr, getattr(tmp_gen, target_attr)
 
         exe = self._section_executor
         futures = [
+            exe.submit(task_runner, describe.inputBody, schemas, "inputBody"),
             exe.submit(task_runner, inputs.inputPathParams, describe.inputPathParams, "inputPathParams"),
             exe.submit(task_runner, inputs.inputQueryParams, describe.inputQueryParams, "inputQueryParams"),
             exe.submit(task_runner, inputs.inputVariables, describe.inputVariables, "inputVariables"),
@@ -328,6 +332,8 @@ class GeneratePydantic:
 
         for item in items:
             result = Inputs()
+            returnInputs = ReturnInputs()
+            result.example = returnInputs.grpcToReturnInputs(inputs=item.inputs)
             result.markDown = intermediate_results[item.name]["markdown"]
             result.input = intermediate_results[item.name]["input"]
             result.output = intermediate_results[item.name]["output"]

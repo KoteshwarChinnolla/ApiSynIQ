@@ -1,5 +1,21 @@
 version: "3.8"
 services:
+  apitesting:
+    image: koti21/apisyniq_testing:v1.0.0
+    container_name: apitesting
+    build:
+      context: ./Java_Agent
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+      - "7320:7320"
+    env_file:
+      - ./Java_Agent/.env
+    depends_on:
+      - postgres
+      # - ollama
+    networks:
+      - apis
   apiresolver:
     image: koti21/apiresolver:latest
     container_name: apiresolver
@@ -8,11 +24,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "7321:7321"
+      - "7322:7322"
     env_file:
-      - .env
+      - ./ApiResolver/.env
     depends_on:
       - postgres
-      - ollama
+      # - ollama
     networks:
       - apis
   postgres:
@@ -24,39 +41,39 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql
       - ${PWD}/init.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - apis
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-    entrypoint: >
-        /bin/sh -c '
-        for m in nomic-embed-text tinydolphin; do
-          if [ ! -f "/root/.ollama/models/manifests/$m" ]; then
-            echo "Pulling missing model: $m";
-            ollama pull "$m";
-          else
-            echo "Model already exists: $m";
-          fi;
-        done;
-        exec ollama serve'
-    networks:
-      - apis
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:11435/api/health" ]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+  # ollama:
+  #   image: ollama/ollama:latest
+  #   container_name: ollama
+  #   ports:
+  #     - "11434:11434"
+  #   volumes:
+  #     - ollama_data:/root/.ollama
+  #   entrypoint: >
+  #       /bin/sh -c '
+  #       for m in nomic-embed-text tinydolphin; do
+  #         if [ ! -f "/root/.ollama/models/manifests/$m" ]; then
+  #           echo "Pulling missing model: $m";
+  #           ollama pull "$m";
+  #         else
+  #           echo "Model already exists: $m";
+  #         fi;
+  #       done;
+  #       exec ollama serve'
+  #   networks:
+  #     - apis
+  #   healthcheck:
+  #     test: [ "CMD", "curl", "-f", "http://localhost:11435/api/health" ]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 10
 
 volumes:
   db_data:
-  ollama_data:
+  # ollama_data:
 
 networks:
   apis:
