@@ -30,7 +30,7 @@ spring:
         index-type: ${PGVECTOR_VECTOR_STORE_INDEX_TYPE:hnsw}
         schema-validation: ${PGVECTOR_SCHEMA_VALIDATION:true}
   datasource:
-    url: ${POSTGRES_URL}
+    url: ${POSTGRES_URL:jdbc:postgresql://localhost:5432/apis}
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:koti21}
     driver-class-name: org.postgresql.Driver

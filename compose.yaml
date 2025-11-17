@@ -17,7 +17,7 @@ services:
     networks:
       - apis
   apiresolver:
-    image: koti21/apiresolver:latest
+    image: koti21/apiresolver:v1.0.0
     container_name: apiresolver
     build:
       context: ./ApiResolver
