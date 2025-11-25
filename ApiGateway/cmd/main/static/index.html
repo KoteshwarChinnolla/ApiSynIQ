@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<title>Audio Streaming</title>
+
+<script type="text/javascript">
+
+let conn = null;
+
+// ---- Separate AudioContexts ----
+let audioCtxPlay = null;   // For playback ONLY
+let audioCtxMic  = null;   // For mic + audio worklet ONLY
+
+// Playback queue
+let audioQueue = [];
+let isPlaying = false;
+
+// Mic
+let workletNode = null;
+let micStream = null;
+let pcmBuffer = [];
+let samplesCount = 0;
+const SAMPLES_PER_SECOND = 16000;
+
+// ------------------------------------------------------------------
+// HELPERS
+// ------------------------------------------------------------------
+function $(id) {
+    return document.getElementById(id);
+}
+
+function logMessage(text) {
+    const div = document.createElement("div");
+    div.innerText = text;
+    $("log").appendChild(div);
+}
+
+function getFields() {
+    return {
+        username: $("username").value.trim(),
+        sessionId: $("sessionId").value.trim(),
+        streamId: $("streamId").value.trim(),
+        language: $("language").value.trim(),
+        optionsText: $("options").value.trim()
+    };
+}
+
+// ------------------------------------------------------------------
+// WEBSOCKET
+// ------------------------------------------------------------------
+function createWebSocket(fields) {
+    username = fields.username;
+    if (!username) {
+        alert("Username required");
+        return null;
+    }
+    if (conn) conn.close();
+
+    const socket = new WebSocket(`ws://${location.host}/ws?name=${username}`);
+
+    socket.onopen = () => {
+        socket.send(JSON.stringify({
+            username: fields.username || "Sample_user",
+            audio_chunk: "STREAM_STARTING",
+            language: fields.language || "en-US",
+            stream_id: fields.streamId || "stream_001",
+            session_id: fields.sessionId || "session_001",
+            audio_option: "pcm16",
+            options: fields.optionsText ? JSON.parse(fields.optionsText) : {}
+        }));
+        logMessage("Connected");
+    };
+    socket.onclose = () =>{
+        socket.send("CLOSE_CONNECTION");
+        logMessage("Connection Closed");
+    };
+    socket.onerror = (e) => logMessage("WS error: " + e);
+
+    return socket;
+}
+
+// ------------------------------------------------------------------
+// AUDIO PLAYBACK  (Uses audioCtxPlay)
+// ------------------------------------------------------------------
+async function handleIncomingAudio(evt) {
+    let msg;
+
+    try {
+        msg = JSON.parse(evt.data);
+    } catch (e) {
+        console.log("Non-JSON message:", evt.data);
+        return;
+    }
+
+    if (!msg.audio_bytes) {
+        console.log("Received:", msg);
+        return;
+    }
+
+    // ---- Create playback context if needed ----
+    if (!audioCtxPlay) {
+        audioCtxPlay = new (window.AudioContext || window.webkitAudioContext)();
+        console.log("[PLAYBACK] sampleRate=", audioCtxPlay.sampleRate);
+    }
+
+    const sampleRate = msg.sample_rate || 16000;
+    const channels = msg.channels || 1;
+
+    // Decode base64 → Int16 → Float32
+    const raw = atob(msg.audio_bytes);
+    const buffer = new ArrayBuffer(raw.length);
+    const view = new Uint8Array(buffer);
+    for (let i = 0; i < raw.length; i++) view[i] = raw.charCodeAt(i);
+
+    const int16 = new Int16Array(buffer);
+    const float32 = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 32768;
+
+    // Queue for clean, sequential playback
+    audioQueue.push({ float32, sampleRate, channels });
+    processAudioQueue();
+}
+
+function processAudioQueue() {
+    if (isPlaying || audioQueue.length === 0) return;
+
+    const { float32, sampleRate, channels } = audioQueue.shift();
+    isPlaying = true;
+
+    const audioBuffer = audioCtxPlay.createBuffer(
+        channels,
+        float32.length,
+        sampleRate
+    );
+
+    audioBuffer.copyToChannel(float32, 0);
+
+    const source = audioCtxPlay.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(audioCtxPlay.destination);
+
+    source.onended = () => {
+        isPlaying = false;
+        processAudioQueue();
+    };
+
+    source.start(0);
+}
+
+// ------------------------------------------------------------------
+// RAW PCM RECORDING  (Uses audioCtxMic)
+// ------------------------------------------------------------------
+async function startMicRecording(fields) {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    // ---- Mic audio context ----
+    audioCtxMic = new (window.AudioContext || window.webkitAudioContext)({
+        sampleRate: 16000
+    });
+
+    await audioCtxMic.audioWorklet.addModule("pcm16-processor.js");
+
+    workletNode = new AudioWorkletNode(audioCtxMic, "pcm16-processor");
+
+    workletNode.port.onmessage = (event) => {
+        const chunk = event.data;
+        pcmBuffer.push(chunk);
+        samplesCount += chunk.length;
+
+        // Send 1 second of PCM (16000 samples)
+        if (samplesCount >= SAMPLES_PER_SECOND) {
+            const merged = mergeChunks(pcmBuffer);
+
+            if (conn && conn.readyState === WebSocket.OPEN) {
+                conn.send(merged.buffer);
+            }
+
+            pcmBuffer = [];
+            samplesCount = 0;
+        }
+    };
+
+    const source = audioCtxMic.createMediaStreamSource(micStream);
+    source.connect(workletNode);
+
+    logMessage("Mic started");
+}
+
+function mergeChunks(chunks) {
+    const totalSamples = chunks.reduce((sum, arr) => sum + arr.length, 0);
+    const result = new Int16Array(totalSamples);
+
+    let offset = 0;
+    for (const chunk of chunks) {
+        result.set(chunk, offset);
+        offset += chunk.length;
+    }
+
+    return result;
+}
+
+function stopMicRecording() {
+    if (micStream) micStream.getTracks().forEach(t => t.stop());
+    if (workletNode) workletNode.disconnect();
+
+    if (audioCtxMic) audioCtxMic.close();
+
+    console.log("STOP_AUDIO")
+    conn.send("STOP_AUDIO");
+
+    workletNode = null;
+    micStream = null;
+    audioCtxMic = null;
+
+    logMessage("Mic stopped.");
+}
+
+// ------------------------------------------------------------------
+// CONNECT
+// ------------------------------------------------------------------
+function onConnect() {
+    const fields = getFields();
+
+    // ------------------------------------
+    // CASE 1: Already connected → Disconnect
+    // ------------------------------------
+    if (conn && conn.readyState === WebSocket.OPEN) {
+        console.log("Disconnecting WebSocket…");
+
+        // Send close signal BEFORE closing the socket
+        conn.send("CLOSE_CONNECTION");
+
+        conn.close();
+        conn = null;
+
+        $("connectBtn").innerText = "Connect";
+        $("micBtn").disabled = true;
+        $("micBtn").innerText = "🎤 Start Mic";
+
+        logMessage("Disconnected");
+        return;
+    }
+
+    // ------------------------------------
+    // CASE 2: Not connected → Connect
+    // ------------------------------------
+    console.log("Connecting WebSocket…");
+
+    conn = createWebSocket(fields);
+    if (!conn) return;
+
+    conn.onmessage = handleIncomingAudio;
+
+    $("connectBtn").innerText = "Disconnect";
+    $("micBtn").disabled = false;
+}
+
+
+// ------------------------------------------------------------------
+// MIC TOGGLE
+// ------------------------------------------------------------------
+async function onMicToggle() {
+    const fields = getFields();
+
+    if (!fields.username) {
+        alert("Please enter username");
+        return;
+    }
+
+    if (workletNode) {
+        stopMicRecording();
+        $("micBtn").innerText = "🎤 Start Mic";
+        return;
+    }
+
+    if (!conn) return;
+
+    await startMicRecording(fields);
+    $("micBtn").innerText = "⏹ Stop Mic";
+}
+
+// ------------------------------------------------------------------
+window.onload = function () {
+    $("connectBtn").onclick = onConnect;
+    $("micBtn").onclick = onMicToggle;
+};
+
+</script>
+
+<style>
+body { font-family: Arial; }
+label { display:block;margin-top:10px; }
+#log {
+    background:white;
+    padding:1em;
+    height:200px;
+    overflow:auto;
+    border:1px solid #ccc;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Audio Streaming Client</h2>
+
+<label>Username:</label>
+<input type="text" id="username" placeholder="koti">
+
+<label>Session ID:</label>
+<input type="text" id="sessionId" placeholder="sess_001">
+
+<label>Stream ID:</label>
+<input type="text" id="streamId" placeholder="stream_001">
+
+<label>Language:</label>
+<input type="text" id="language" placeholder="en">
+
+<label>Options (JSON):</label>
+<textarea id="options" rows="2" placeholder='{"key": "value"}'></textarea>
+
+<br><br>
+
+<button id="connectBtn">Connect</button>
+<button id="micBtn">🎤 Start Mic</button>
+
+<h3>Logs</h3>
+<div id="log"></div>
+
+</body>
+</html>

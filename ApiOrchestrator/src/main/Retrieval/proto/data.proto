@@ -72,3 +72,77 @@ service Controller {
   rpc searchMatchesForReturnDescription(query) returns (repeatedInput);
   rpc save(EndpointData) returns (query);
 }
+
+message RawAudio {
+    bytes audio_bytes =1;
+}
+
+message AudioChunk {
+    bytes audio_bytes = 1;
+    int32 sample_rate = 2;
+    int32 channels = 3;
+    string text = 4;
+    string username = 5;
+    string session_id = 6;
+    string stream_id = 7;
+    string language = 8;
+    string audio_option = 9;
+    map<string, string> options = 10;
+}
+
+message IncomingAudio {
+    bytes audio_chunk = 1;
+    string username = 2;
+    string session_id = 3;
+    string stream_id = 4;
+    string language = 5;
+    string audio_option = 6;
+    map<string, string> options = 7;
+}
+
+message Text {
+    string text = 1;
+    string username = 2;
+    string session_id = 3;
+    string stream_id = 4;
+    string language = 5;
+    map<string, string> options = 6;
+}
+
+message Event {
+    string event = 1;
+    string username = 2;
+    string session_id = 3;
+    string stream_id = 4;
+    string language = 5;
+    map<string, string> options = 6;
+}
+
+message Error {
+    string error = 1;
+    string username = 2;
+    string session_id = 3;
+    string stream_id = 4;
+    string language = 5;
+    map<string, string> options = 6;
+}
+
+message StreamPacket {
+    oneof packet {
+        IncomingAudio audio_in = 1;
+        AudioChunk audio_out = 2;
+        Text text = 3;
+        Event event = 4;
+        Error error = 5;
+        RawAudio raw_audio=6; 
+    }
+}
+
+message Empty {}
+
+service TTSService {
+    rpc UploadAudio(stream StreamPacket) returns (Empty);
+    rpc UploadText(stream Text) returns (Empty);
+    rpc UploadEvent(stream Event) returns (Empty);
+    rpc UploadError(stream Error) returns (Empty);
+}

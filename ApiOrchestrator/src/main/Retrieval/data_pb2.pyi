@@ -165,3 +165,154 @@ class query(_message.Message):
     query: str
     limit: int
     def __init__(self, query: _Optional[str] = ..., limit: _Optional[int] = ...) -> None: ...
+
+class RawAudio(_message.Message):
+    __slots__ = ("audio_bytes",)
+    AUDIO_BYTES_FIELD_NUMBER: _ClassVar[int]
+    audio_bytes: bytes
+    def __init__(self, audio_bytes: _Optional[bytes] = ...) -> None: ...
+
+class AudioChunk(_message.Message):
+    __slots__ = ("audio_bytes", "sample_rate", "channels", "text", "username", "session_id", "stream_id", "language", "audio_option", "options")
+    class OptionsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    AUDIO_BYTES_FIELD_NUMBER: _ClassVar[int]
+    SAMPLE_RATE_FIELD_NUMBER: _ClassVar[int]
+    CHANNELS_FIELD_NUMBER: _ClassVar[int]
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    STREAM_ID_FIELD_NUMBER: _ClassVar[int]
+    LANGUAGE_FIELD_NUMBER: _ClassVar[int]
+    AUDIO_OPTION_FIELD_NUMBER: _ClassVar[int]
+    OPTIONS_FIELD_NUMBER: _ClassVar[int]
+    audio_bytes: bytes
+    sample_rate: int
+    channels: int
+    text: str
+    username: str
+    session_id: str
+    stream_id: str
+    language: str
+    audio_option: str
+    options: _containers.ScalarMap[str, str]
+    def __init__(self, audio_bytes: _Optional[bytes] = ..., sample_rate: _Optional[int] = ..., channels: _Optional[int] = ..., text: _Optional[str] = ..., username: _Optional[str] = ..., session_id: _Optional[str] = ..., stream_id: _Optional[str] = ..., language: _Optional[str] = ..., audio_option: _Optional[str] = ..., options: _Optional[_Mapping[str, str]] = ...) -> None: ...
+
+class IncomingAudio(_message.Message):
+    __slots__ = ("audio_chunk", "username", "session_id", "stream_id", "language", "audio_option", "options")
+    class OptionsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    AUDIO_CHUNK_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    STREAM_ID_FIELD_NUMBER: _ClassVar[int]
+    LANGUAGE_FIELD_NUMBER: _ClassVar[int]
+    AUDIO_OPTION_FIELD_NUMBER: _ClassVar[int]
+    OPTIONS_FIELD_NUMBER: _ClassVar[int]
+    audio_chunk: bytes
+    username: str
+    session_id: str
+    stream_id: str
+    language: str
+    audio_option: str
+    options: _containers.ScalarMap[str, str]
+    def __init__(self, audio_chunk: _Optional[bytes] = ..., username: _Optional[str] = ..., session_id: _Optional[str] = ..., stream_id: _Optional[str] = ..., language: _Optional[str] = ..., audio_option: _Optional[str] = ..., options: _Optional[_Mapping[str, str]] = ...) -> None: ...
+
+class Text(_message.Message):
+    __slots__ = ("text", "username", "session_id", "stream_id", "language", "options")
+    class OptionsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    STREAM_ID_FIELD_NUMBER: _ClassVar[int]
+    LANGUAGE_FIELD_NUMBER: _ClassVar[int]
+    OPTIONS_FIELD_NUMBER: _ClassVar[int]
+    text: str
+    username: str
+    session_id: str
+    stream_id: str
+    language: str
+    options: _containers.ScalarMap[str, str]
+    def __init__(self, text: _Optional[str] = ..., username: _Optional[str] = ..., session_id: _Optional[str] = ..., stream_id: _Optional[str] = ..., language: _Optional[str] = ..., options: _Optional[_Mapping[str, str]] = ...) -> None: ...
+
+class Event(_message.Message):
+    __slots__ = ("event", "username", "session_id", "stream_id", "language", "options")
+    class OptionsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    EVENT_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    STREAM_ID_FIELD_NUMBER: _ClassVar[int]
+    LANGUAGE_FIELD_NUMBER: _ClassVar[int]
+    OPTIONS_FIELD_NUMBER: _ClassVar[int]
+    event: str
+    username: str
+    session_id: str
+    stream_id: str
+    language: str
+    options: _containers.ScalarMap[str, str]
+    def __init__(self, event: _Optional[str] = ..., username: _Optional[str] = ..., session_id: _Optional[str] = ..., stream_id: _Optional[str] = ..., language: _Optional[str] = ..., options: _Optional[_Mapping[str, str]] = ...) -> None: ...
+
+class Error(_message.Message):
+    __slots__ = ("error", "username", "session_id", "stream_id", "language", "options")
+    class OptionsEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    USERNAME_FIELD_NUMBER: _ClassVar[int]
+    SESSION_ID_FIELD_NUMBER: _ClassVar[int]
+    STREAM_ID_FIELD_NUMBER: _ClassVar[int]
+    LANGUAGE_FIELD_NUMBER: _ClassVar[int]
+    OPTIONS_FIELD_NUMBER: _ClassVar[int]
+    error: str
+    username: str
+    session_id: str
+    stream_id: str
+    language: str
+    options: _containers.ScalarMap[str, str]
+    def __init__(self, error: _Optional[str] = ..., username: _Optional[str] = ..., session_id: _Optional[str] = ..., stream_id: _Optional[str] = ..., language: _Optional[str] = ..., options: _Optional[_Mapping[str, str]] = ...) -> None: ...
+
+class StreamPacket(_message.Message):
+    __slots__ = ("audio_in", "audio_out", "text", "event", "error", "raw_audio")
+    AUDIO_IN_FIELD_NUMBER: _ClassVar[int]
+    AUDIO_OUT_FIELD_NUMBER: _ClassVar[int]
+    TEXT_FIELD_NUMBER: _ClassVar[int]
+    EVENT_FIELD_NUMBER: _ClassVar[int]
+    ERROR_FIELD_NUMBER: _ClassVar[int]
+    RAW_AUDIO_FIELD_NUMBER: _ClassVar[int]
+    audio_in: IncomingAudio
+    audio_out: AudioChunk
+    text: Text
+    event: Event
+    error: Error
+    raw_audio: RawAudio
+    def __init__(self, audio_in: _Optional[_Union[IncomingAudio, _Mapping]] = ..., audio_out: _Optional[_Union[AudioChunk, _Mapping]] = ..., text: _Optional[_Union[Text, _Mapping]] = ..., event: _Optional[_Union[Event, _Mapping]] = ..., error: _Optional[_Union[Error, _Mapping]] = ..., raw_audio: _Optional[_Union[RawAudio, _Mapping]] = ...) -> None: ...
+
+class Empty(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...

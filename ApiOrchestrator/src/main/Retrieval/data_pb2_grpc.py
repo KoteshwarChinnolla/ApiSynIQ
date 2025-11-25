@@ -224,3 +224,204 @@ class Controller(object):
             timeout,
             metadata,
             _registered_method=True)
+
+
+class TTSServiceStub(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def __init__(self, channel):
+        """Constructor.
+
+        Args:
+            channel: A grpc.Channel.
+        """
+        self.UploadAudio = channel.stream_unary(
+                '/apisyniq.TTSService/UploadAudio',
+                request_serializer=data__pb2.StreamPacket.SerializeToString,
+                response_deserializer=data__pb2.Empty.FromString,
+                _registered_method=True)
+        self.UploadText = channel.stream_unary(
+                '/apisyniq.TTSService/UploadText',
+                request_serializer=data__pb2.Text.SerializeToString,
+                response_deserializer=data__pb2.Empty.FromString,
+                _registered_method=True)
+        self.UploadEvent = channel.stream_unary(
+                '/apisyniq.TTSService/UploadEvent',
+                request_serializer=data__pb2.Event.SerializeToString,
+                response_deserializer=data__pb2.Empty.FromString,
+                _registered_method=True)
+        self.UploadError = channel.stream_unary(
+                '/apisyniq.TTSService/UploadError',
+                request_serializer=data__pb2.Error.SerializeToString,
+                response_deserializer=data__pb2.Empty.FromString,
+                _registered_method=True)
+
+
+class TTSServiceServicer(object):
+    """Missing associated documentation comment in .proto file."""
+
+    def UploadAudio(self, request_iterator, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UploadText(self, request_iterator, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UploadEvent(self, request_iterator, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UploadError(self, request_iterator, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+
+def add_TTSServiceServicer_to_server(servicer, server):
+    rpc_method_handlers = {
+            'UploadAudio': grpc.stream_unary_rpc_method_handler(
+                    servicer.UploadAudio,
+                    request_deserializer=data__pb2.StreamPacket.FromString,
+                    response_serializer=data__pb2.Empty.SerializeToString,
+            ),
+            'UploadText': grpc.stream_unary_rpc_method_handler(
+                    servicer.UploadText,
+                    request_deserializer=data__pb2.Text.FromString,
+                    response_serializer=data__pb2.Empty.SerializeToString,
+            ),
+            'UploadEvent': grpc.stream_unary_rpc_method_handler(
+                    servicer.UploadEvent,
+                    request_deserializer=data__pb2.Event.FromString,
+                    response_serializer=data__pb2.Empty.SerializeToString,
+            ),
+            'UploadError': grpc.stream_unary_rpc_method_handler(
+                    servicer.UploadError,
+                    request_deserializer=data__pb2.Error.FromString,
+                    response_serializer=data__pb2.Empty.SerializeToString,
+            ),
+    }
+    generic_handler = grpc.method_handlers_generic_handler(
+            'apisyniq.TTSService', rpc_method_handlers)
+    server.add_generic_rpc_handlers((generic_handler,))
+    server.add_registered_method_handlers('apisyniq.TTSService', rpc_method_handlers)
+
+
+ # This class is part of an EXPERIMENTAL API.
+class TTSService(object):
+    """Missing associated documentation comment in .proto file."""
+
+    @staticmethod
+    def UploadAudio(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_unary(
+            request_iterator,
+            target,
+            '/apisyniq.TTSService/UploadAudio',
+            data__pb2.StreamPacket.SerializeToString,
+            data__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UploadText(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_unary(
+            request_iterator,
+            target,
+            '/apisyniq.TTSService/UploadText',
+            data__pb2.Text.SerializeToString,
+            data__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UploadEvent(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_unary(
+            request_iterator,
+            target,
+            '/apisyniq.TTSService/UploadEvent',
+            data__pb2.Event.SerializeToString,
+            data__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UploadError(request_iterator,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.stream_unary(
+            request_iterator,
+            target,
+            '/apisyniq.TTSService/UploadError',
+            data__pb2.Error.SerializeToString,
+            data__pb2.Empty.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)

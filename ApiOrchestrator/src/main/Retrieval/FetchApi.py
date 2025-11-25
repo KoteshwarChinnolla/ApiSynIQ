@@ -1,6 +1,9 @@
+from concurrent.futures import ThreadPoolExecutor
 import grpc
 from . import data_pb2_grpc as grpc_services
-from .data_pb2 import query, InputsAndReturnsMatch, repeatedInput
+from .data_pb2 import query, InputsAndReturnsMatch, repeatedInput, AudioChunk, Empty, StreamPacket
+
+
 
 class FetchApi:
   def __init__(self):
@@ -15,17 +18,22 @@ class FetchApi:
   
   def searchMatchesForReturnDescription(self, query: query) -> repeatedInput:
     return self.stub.searchMatchesForReturnDescription(query)
-    
-# request = query(query=input("Enter the query "), limit=int(input("Enter the limit ")))
-# request = query(query="Fetches a calendar record for a specific employee on a given date.", limit=2)
-# print(f"1->both \n2->input \n3->return")
-# match str(2):
-#   case "1":
-#     print(FetchApi().searchMatchesForBoth(request))
-#   case "2":
-#     print(FetchApi().searchMatchesForInputDescription(request))
-#   case "3":
-#     print(FetchApi().searchMatchesForReturnDescription(request))
 
-# i want to apply for a leave please elp me with that
-# can i get the calender details for this month
+class AudioStream:
+    def __init__(self):
+        channel = grpc.insecure_channel("localhost:7323")
+        stub = grpc_services.TTSServiceStub(channel)
+        self.stub = stub
+        self._queue = [] 
+
+    def push_chunk(self, audio_chunk):
+        pocket = StreamPacket(audio_out=audio_chunk)
+        self._queue.append(pocket)
+
+    def flush(self):
+        # UploadAudio expects an iterator of AudioChunk
+        def gen():
+            while self._queue:
+                yield self._queue.pop(0)
+
+        self.stub.UploadAudio(gen())
