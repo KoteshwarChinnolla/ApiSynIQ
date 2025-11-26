@@ -26,7 +26,8 @@ func (s *server) UploadAudio(stream pb.TTSService_UploadAudioServer) error {
 		if err != nil {
 			return err
 		}
-		websocket.GlobalHub.BroadcastAudio(chunk.GetAudioOut())
+		// websocket.GlobalHub.BroadcastAudio(chunk.GetAudioOut())
+		websocket.GlobalHub.Broadcast <- chunk.GetAudioOut()
 		log.Printf("Received chunk: %d bytes, sample_rate=%d, channels=%d, text=%s\n",
 			len(chunk.GetAudioOut().AudioBytes), chunk.GetAudioOut().Channels, chunk.GetAudioOut().SampleRate, chunk.GetAudioOut().Text)
 	}

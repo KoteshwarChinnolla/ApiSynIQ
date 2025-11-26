@@ -41,6 +41,7 @@ function getFields() {
         sessionId: $("sessionId").value.trim(),
         streamId: $("streamId").value.trim(),
         language: $("language").value.trim(),
+        audio_option: $("audio_option").value.trim(),
         optionsText: $("options").value.trim()
     };
 }
@@ -65,7 +66,7 @@ function createWebSocket(fields) {
             language: fields.language || "en-US",
             stream_id: fields.streamId || "stream_001",
             session_id: fields.sessionId || "session_001",
-            audio_option: "pcm16",
+            audio_option: fields.audio_option || "kathleen",
             options: fields.optionsText ? JSON.parse(fields.optionsText) : {}
         }));
         logMessage("Connected");
@@ -315,6 +316,9 @@ label { display:block;margin-top:10px; }
 
 <label>Language:</label>
 <input type="text" id="language" placeholder="en">
+
+<label>Audio Option:</label>
+<input type="text" id="audio_option" placeholder="kathleen">
 
 <label>Options (JSON):</label>
 <textarea id="options" rows="2" placeholder='{"key": "value"}'></textarea>

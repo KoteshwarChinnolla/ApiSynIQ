@@ -7,14 +7,22 @@ from Retrieval.FetchApi import AudioStream
 from Retrieval.data_pb2 import AudioChunk
 
 class SpeakTranscribe:
-    def __init__(self, max_chars: int = 150):
-        self.model_path = "./Transcribe/Utils/kushal/model.onnx"
+    def __init__(self, max_chars: int = 150, audioChunk: AudioChunk = AudioChunk()):
+        print("At SpeakTranscribe")
+        print(audioChunk)
+        self.model_path = None
+        if audioChunk.audio_option != None:
+            print("[INFO] Selected model:", audioChunk.audio_option)
+            self.model_path = "./Transcribe/Utils/"+audioChunk.audio_option+"/model.onnx" 
+        else: 
+            self.model_path = "./Transcribe/Utils/kathleen/model.onnx"
+        
         self.max_chars = max_chars
         self.audioStream = AudioStream()
         # Queues
         self.text_queue = queue.Queue()
         self.audio_queue = queue.Queue()
-
+        self.audioChunk = audioChunk
         self.shutdown_flag = False
 
         # Chunk buffer for accumulating tokens
@@ -30,6 +38,8 @@ class SpeakTranscribe:
             noise_w_scale=0.7,
             normalize_audio=True,
         )
+
+        print("[INFO] Piper model loaded.")
 
         # Threads
         self.tts_thread = threading.Thread(target=self._tts_worker, daemon=True)
@@ -66,12 +76,15 @@ class SpeakTranscribe:
             audio_chunks = self.voice.synthesize(text, syn_config=self.syn_config)
 
             for chunk in audio_chunks:
-                float_audio = chunk.audio_int16_bytes  
-                send_to_grpc = AudioChunk(audio_bytes=float_audio, sample_rate=chunk.sample_rate, channels=1, text=text, username="username", session_id="session_id", stream_id="stream_id", language="language", audio_option="audio_option")
+                send_to_grpc = self.audioChunk
+                send_to_grpc.text = text
+                send_to_grpc.audio_bytes = chunk.audio_int16_bytes  
+                send_to_grpc.sample_rate = chunk.sample_rate
+                send_to_grpc.channels = 1
                 self.audioStream.push_chunk(send_to_grpc)
                 
                 # self.audio_queue.put((float_audio, chunk.sample_rate, text))
-                # Sending to frontend logic
+                
             self.audioStream.flush()
             self.text_queue.task_done()
 
@@ -111,7 +124,6 @@ class SpeakTranscribe:
         print("[INFO] Received text:", text)
         self._start()
         try:
-            self.model_path = "./Transcribe/Utils/"+voice+"/model.onnx"
             for token in text.split():
                 self._speak(token)
             

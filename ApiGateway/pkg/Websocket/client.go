@@ -43,7 +43,7 @@ var upgrader = websocket.Upgrader{
 type Client struct {
 	hub          *Hub
 	conn         *websocket.Conn
-	send         chan []byte
+	send         chan *proto.AudioChunk
 	orchestrator *stub.ApiOrchestrator
 	UserID       string
 	StreamID     string
@@ -89,7 +89,7 @@ func (c *Client) writePump() {
 
 	for {
 		select {
-		case audioBytes, ok := <-c.send: // <-- receive audio from backend
+		case audioBytes, ok := <-c.send:
 			if !ok {
 				// channel closed
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
@@ -97,14 +97,14 @@ func (c *Client) writePump() {
 			}
 
 			// SEND **binary audio** to browser
-			err := c.conn.WriteMessage(websocket.BinaryMessage, audioBytes)
+			// err := c.conn.WriteMessage(websocket.BinaryMessage, audioBytes)
+			err := c.conn.WriteJSON(audioBytes)
 			if err != nil {
 				log.Println("write error:", err)
 				return
 			}
 
 		case <-ticker.C:
-			// keepalive ping
 			_ = c.conn.WriteMessage(websocket.PingMessage, []byte("ping"))
 		}
 	}
@@ -125,7 +125,7 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	c.Stream = stream
-	client := &Client{hub: hub, conn: conn, send: make(chan []byte, 256), orchestrator: c, UserID: name}
+	client := &Client{hub: hub, conn: conn, send: make(chan *proto.AudioChunk, 256), orchestrator: c, UserID: name}
 
 	_, msg, _ := conn.ReadMessage()
 	var incoming proto.IncomingAudio

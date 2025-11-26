@@ -7,27 +7,34 @@ import subprocess
 import base64
 
 from Transcribe.TextToSpeech import SpeakTranscribe
+from Retrieval.data_pb2 import AudioChunk
 
 
 class TextTranscriber:
-    def __init__(self):
+    def __init__(self, sample_rate: int = 16000):
         SetLogLevel(0)
         self.model = Model(lang="en-us")
-        self.sample_rate = 16000  # match your input!
+        self.sample_rate = sample_rate  # match your input!
+        self.AudioChunk = None
         self.rec = KaldiRecognizer(self.model, self.sample_rate)
         self.rec.SetWords(True)
         self.rec.SetPartialWords(True)
         self.text = ""
-        self.text_stream = SpeakTranscribe()
+        self.text_stream = None
+
+    def LoadAudio(self, chunk: AudioChunk):
+        print("At LoadAudio")
+        print(chunk)
+        self.AudioChunk = chunk
+        self.text_stream = SpeakTranscribe(audioChunk=self.AudioChunk)
+
 
     def SpeechToText(self, chunk):        
         if(not chunk):
             return
         pcm_data = chunk.raw_audio.audio_bytes
-        # print(str(pcm_data))
         if str(pcm_data) == "b'STOP_AUDIO'":
-            text_stream = SpeakTranscribe()
-            text_stream.tts_worker(self.text + ".", "kushal")
+            self.text_stream.tts_worker(self.text + ".", )
             self.text = ""
             return self.text
         

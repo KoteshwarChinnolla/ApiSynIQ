@@ -6,35 +6,45 @@ package websocket
 
 import (
 	"ApiGateway/pkg/proto"
-	"log"
 )
 
-// Hub maintains the set of active clients and broadcasts messages to the
-// clients.
 var (
 	GlobalHub *Hub
 )
 
 type Hub struct {
-	clients    map[*Client]string
-	broadcast  chan []byte
+	clients    map[string][]*Client
+	Broadcast  chan *proto.AudioChunk
 	register   chan *Client
 	unregister chan *Client
 }
 
 func NewHub() {
 	GlobalHub = &Hub{
-		broadcast:  make(chan []byte),
+		Broadcast:  make(chan *proto.AudioChunk),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		clients:    make(map[*Client]string),
+		clients:    make(map[string][]*Client),
 	}
 }
 
-func (h *Hub) BroadcastAudio(data *proto.AudioChunk) {
-	for client := range h.clients {
-		log.Println("Broadcasting audio to " + client.UserID)
-		client.conn.WriteJSON(data)
+func (h *Hub) broadcastAudio(data *proto.AudioChunk) {
+	for _, client := range h.clients[data.Username] {
+		client.send <- data
+	}
+}
+
+func (h *Hub) removeClient(userID string, client *Client) {
+	clients := h.clients[userID]
+
+	for i, c := range clients {
+		if c == client {
+			h.clients[userID] = append(clients[:i], clients[i+1:]...)
+			if len(h.clients[userID]) == 0 {
+				delete(h.clients, userID)
+			}
+			return
+		}
 	}
 }
 
@@ -42,21 +52,15 @@ func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			h.clients[client] = client.UserID
+			h.clients[client.UserID] = append(h.clients[client.UserID], client)
+
 		case client := <-h.unregister:
-			if _, ok := h.clients[client]; ok {
-				delete(h.clients, client)
+			if _, ok := h.clients[client.UserID]; ok {
+				h.removeClient(client.UserID, client)
 				close(client.send)
 			}
-		case message := <-h.broadcast:
-			for client := range h.clients {
-				select {
-				case client.send <- message:
-				default:
-					close(client.send)
-					delete(h.clients, client)
-				}
-			}
+		case message := <-h.Broadcast:
+			h.broadcastAudio(message)
 		}
 	}
 }

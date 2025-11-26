@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from Transcribe.SpeechToText import TextTranscriber
 from Transcribe.TextToSpeech import SpeakTranscribe
 from . import data_pb2_grpc as grpc_services
-from .data_pb2 import IncomingAudio
+from .data_pb2 import IncomingAudio, AudioChunk
 
 import grpc
 
@@ -35,7 +35,11 @@ class TTSServiceServicer(grpc_services.TTSServiceServicer):
             packet_type = chunk.WhichOneof("packet")
             print(packet_type)
             if packet_type=="audio_in" :
-                print(chunk)
+                audio = chunk.audio_in
+                print(audio)
+                audioChunk = AudioChunk(username=audio.username, session_id=audio.session_id, stream_id=audio.stream_id, language=audio.language, audio_option=audio.audio_option)
+                print(audioChunk)
+                self.audio_stream.LoadAudio(audioChunk)
             else:
                 final_text = self.audio_stream.SpeechToText(chunk)
                 print(final_text)
