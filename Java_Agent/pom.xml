@@ -6,35 +6,26 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
         <version>3.5.6</version>
-        <relativePath/> <!-- lookup parent from repository -->
+        <relativePath/>
     </parent>
-    <groupId>AIExpose</groupId>
-    <artifactId>Agent</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-    <name>Agent</name>
-    <description>Demo project for Spring Boot</description>
-    <url/>
-    <licenses>
-        <license/>
-    </licenses>
-    <developers>
-        <developer/>
-    </developers>
-    <scm>
-        <connection/>
-        <developerConnection/>
-        <tag/>
-        <url/>
-    </scm>
+    <groupId>com.github.KoteshwarChinnolla</groupId>
+    <artifactId>agent</artifactId>
+    <version>0.0.1</version>
+
+    <name>AIExpose</name>
+    <description>Agent SDK used to expose the endpoints to the LLM</description>
+    <url>https://github.com/KoteshwarChinnolla/ApiSynIQ/tree/main/Java_Agent</url>
+    
     <properties>
         <java.version>21</java.version>
-        <spring-ai.version>1.0.3</spring-ai.version>
         <grpc.version>1.74.0</grpc.version>
         <protobuf-java.version>4.31.1</protobuf-java.version>
         <spring-grpc.version>0.11.0</spring-grpc.version>
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
     </properties>
+
+
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -42,50 +33,33 @@
         </dependency>
 
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-devtools</artifactId>
-            <scope>runtime</scope>
-            <optional>true</optional>
-        </dependency>
-        <dependency>
-            <groupId>org.postgresql</groupId>
-            <artifactId>postgresql</artifactId>
-            <version>42.7.3</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-aop</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <optional>true</optional>
+            <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
+
         <dependency>
             <groupId>io.grpc</groupId>
             <artifactId>grpc-services</artifactId>
+            <version>${grpc.version}</version>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>org.springframework.grpc</groupId>-->
-<!--            <artifactId>spring-grpc-server-web-spring-boot-starter</artifactId>-->
-<!--        </dependency>-->
+
         <dependency>
             <groupId>net.devh</groupId>
             <artifactId>grpc-server-spring-boot-starter</artifactId>
             <version>3.1.0.RELEASE</version>
         </dependency>
+
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
+            <version>${protobuf-java.version}</version>
         </dependency>
+
         <dependency>
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java-util</artifactId>
+            <version>${protobuf-java.version}</version>
         </dependency>
     </dependencies>
     <dependencyManagement>
@@ -130,25 +104,13 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>generate</id>
                         <goals>
                             <goal>generate</goal>
                         </goals>
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-maven-plugin</artifactId>
-                <configuration>
-                    <excludes>
-                        <exclude>
-                            <groupId>org.projectlombok</groupId>
-                            <artifactId>lombok</artifactId>
-                        </exclude>
-                    </excludes>
-                </configuration>
-            </plugin>
+
         </plugins>
     </build>
 </project>

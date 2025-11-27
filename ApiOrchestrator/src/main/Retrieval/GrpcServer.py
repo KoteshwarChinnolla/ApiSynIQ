@@ -27,20 +27,42 @@ class GrpcServer:
 class TTSServiceServicer(grpc_services.TTSServiceServicer):
 
     def __init__(self):
-        self.audio_stream = TextTranscriber()
-        
+        # key = session_id, value = TextTranscriber instance
+        self.sessions = {}
+
+    def get_session(self, session_id):
+        if session_id not in self.sessions:
+            print(f"[INFO] Creating new STT session for {session_id}")
+            self.sessions[session_id] = TextTranscriber()
+        return self.sessions[session_id]
+
     def UploadAudio(self, request_iterator, context):
         print("[INFO] Started Receiving...")
+
+        current_session_id = None
+        stt_session = None
+
         for chunk in request_iterator:
             packet_type = chunk.WhichOneof("packet")
-            print(packet_type)
-            if packet_type=="audio_in" :
+
+            if packet_type == "audio_in":
                 audio = chunk.audio_in
-                print(audio)
-                audioChunk = AudioChunk(username=audio.username, session_id=audio.session_id, stream_id=audio.stream_id, language=audio.language, audio_option=audio.audio_option)
-                print(audioChunk)
-                self.audio_stream.LoadAudio(audioChunk)
+                current_session_id = audio.session_id
+
+                stt_session = self.get_session(audio.session_id)
+
+                audioChunk = AudioChunk(
+                    username=audio.username,
+                    session_id=audio.session_id,
+                    stream_id=audio.stream_id,
+                    language=audio.language,
+                    audio_option=audio.audio_option
+                )
+
+                stt_session.LoadAudio(audioChunk)
+
             else:
-                final_text = self.audio_stream.SpeechToText(chunk)
-                print(final_text)
-        
+                final_text = stt_session.SpeechToText(chunk)
+                print(f"[{current_session_id}] -> {final_text}")
+
+        del self.sessions[current_session_id]

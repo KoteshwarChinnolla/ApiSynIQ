@@ -14,40 +14,47 @@ class TextTranscriber:
     def __init__(self, sample_rate: int = 16000):
         SetLogLevel(0)
         self.model = Model(lang="en-us")
-        self.sample_rate = sample_rate  # match your input!
-        self.AudioChunk = None
+        self.sample_rate = sample_rate
         self.rec = KaldiRecognizer(self.model, self.sample_rate)
         self.rec.SetWords(True)
         self.rec.SetPartialWords(True)
-        self.text = ""
-        self.text_stream = None
+
+        self.audio_chunk: AudioChunk | None = None
+        self.text_stream: SpeakTranscribe | None = None
+        self.text_buffer = []
 
     def LoadAudio(self, chunk: AudioChunk):
-        print("At LoadAudio")
-        print(chunk)
-        self.AudioChunk = chunk
-        self.text_stream = SpeakTranscribe(audioChunk=self.AudioChunk)
+        print("At LoadAudio", chunk)
 
+        # Store metadata
+        self.audio_chunk =chunk
+        self.text_stream =SpeakTranscribe(audioChunk=self.audio_chunk)
 
-    def SpeechToText(self, chunk):        
-        if(not chunk):
-            return
+    def SpeechToText(self, chunk):
+        if not chunk:
+            return ""
+
         pcm_data = chunk.raw_audio.audio_bytes
-        if str(pcm_data) == "b'STOP_AUDIO'":
-            self.text_stream.tts_worker(self.text + ".", )
-            self.text = ""
-            return self.text
-        
-        
-        ok = self.rec.AcceptWaveform(pcm_data)
-        print("Accepted?", ok)
-        if ok:
-            result = json.loads(self.rec.Result())
-            if "text" in result:
-                self.text += " " + result["text"]
-        else:
-            partial = json.loads(self.rec.PartialResult())
 
-        return self.text
+        if pcm_data == b"STOP_AUDIO":
+            final_text = " ".join(self.text_buffer).strip()
+
+            if self.text_stream:
+                self.text_stream.tts_worker(final_text + ".")
+
+            self.text_buffer.clear()
+
+            return final_text
+
+        accepted = self.rec.AcceptWaveform(pcm_data)
+        print("Accepted?", accepted)
+
+        if accepted:
+            result = json.loads(self.rec.Result())
+            if "text" in result and result["text"]:
+                self.text_buffer.append(result["text"])
+        else:
+            _ = json.loads(self.rec.PartialResult())
+
+        return " ".join(self.text_buffer)
  
-      
