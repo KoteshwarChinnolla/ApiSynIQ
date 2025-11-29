@@ -1,5 +1,7 @@
 from Retrieval.data_pb2 import query
 from Retrieval.GrpcServer import GrpcServer
+from Transcribe.TextToSpeech import InitVoiceModels
+from Transcribe.SpeechToText import InitTextModels
 
 def inspect_model(model):
     print("\n=== CLASS INFO ===")
@@ -23,7 +25,6 @@ def inspect_model(model):
   
 
 attrs = {"inputBody", "inputPathParams", "inputQueryParams", "inputVariables", "inputHeaders", "inputCookies"}
-
 query = query(query="get calender details", limit=2)
 
 # gen = GeneratePydantic()
@@ -43,4 +44,7 @@ query = query(query="get calender details", limit=2)
 
 
 if __name__ == "__main__":
+        
+    InitVoiceModels()
+    InitTextModels()
     GrpcServer()

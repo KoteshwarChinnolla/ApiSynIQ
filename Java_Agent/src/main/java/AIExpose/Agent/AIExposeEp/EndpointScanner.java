@@ -29,11 +29,13 @@ import AIExpose.Agent.Annotations.*;
 import AIExpose.Agent.enums.ParamType;
 
 
-@Component
 public class EndpointScanner {
 
-    @Autowired
-    private EndpointBuilder endpointBuilder;
+    private final EndpointBuilder endpointBuilder;
+
+    public EndpointScanner(EndpointBuilder endpointBuilder) {
+        this.endpointBuilder = endpointBuilder;
+    }
     @Value("${aiExpose.global.path:}")
     private String globalPath;
 

@@ -6,6 +6,7 @@ package websocket
 
 import (
 	"ApiGateway/pkg/proto"
+	"log"
 )
 
 var (
@@ -13,7 +14,7 @@ var (
 )
 
 type Hub struct {
-	clients    map[string][]*Client
+	clients    map[string]*Client
 	Broadcast  chan *proto.AudioChunk
 	register   chan *Client
 	unregister chan *Client
@@ -24,40 +25,42 @@ func NewHub() {
 		Broadcast:  make(chan *proto.AudioChunk),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
-		clients:    make(map[string][]*Client),
+		clients:    make(map[string]*Client),
 	}
 }
 
 func (h *Hub) broadcastAudio(data *proto.AudioChunk) {
-	for _, client := range h.clients[data.Username] {
+	client := h.clients[data.SessionId]
+	if client != nil {
 		client.send <- data
 	}
 }
 
-func (h *Hub) removeClient(userID string, client *Client) {
-	clients := h.clients[userID]
-
-	for i, c := range clients {
-		if c == client {
-			h.clients[userID] = append(clients[:i], clients[i+1:]...)
-			if len(h.clients[userID]) == 0 {
-				delete(h.clients, userID)
-			}
-			return
-		}
+func (h *Hub) removeClient(SessionID string, client *Client) {
+	var error proto.Error
+	error.Error = "CLOSE_CONNECTION"
+	error.Username = client.UserID
+	error.SessionId = client.SessionID
+	error.StreamId = client.StreamID
+	error.Language = client.Language
+	err := client.orchestrator.Stream.Send(&proto.StreamPacket{Packet: &proto.StreamPacket_Error{Error: &error}})
+	// client.orchestrator.Stream.CloseSend()
+	if err != nil {
+		log.Print(err)
 	}
+	delete(h.clients, SessionID)
+	close(client.send)
 }
 
 func (h *Hub) Run() {
 	for {
 		select {
 		case client := <-h.register:
-			h.clients[client.UserID] = append(h.clients[client.UserID], client)
-
+			h.clients[client.SessionID] = client
 		case client := <-h.unregister:
-			if _, ok := h.clients[client.UserID]; ok {
-				h.removeClient(client.UserID, client)
-				close(client.send)
+			if _, ok := h.clients[client.SessionID]; ok {
+				h.removeClient(client.SessionID, client)
+				log.Printf("connection closed %s for session %s", client.UserID, client.SessionID)
 			}
 		case message := <-h.Broadcast:
 			h.broadcastAudio(message)

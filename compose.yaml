@@ -1,21 +1,23 @@
 version: "3.8"
 services:
-  apitesting:
-    image: koti21/apisyniq_testing:v1.0.0
-    container_name: apitesting
-    build:
-      context: ./Java_Agent
-      dockerfile: Dockerfile
-    ports:
-      - "8080:8080"
-      - "7320:7320"
-    env_file:
-      - ./Java_Agent/.env
-    depends_on:
-      - postgres
-      # - ollama
-    networks:
-      - apis
+  # apitesting:
+  #   image: koti21/apisyniq_testing:v1.0.0
+  #   container_name: apitesting
+  #   build:
+  #     context: ./Java_Agent
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8080:8080"
+  #     - "7320:7320"
+  #   env_file:
+  #     - ./Java_Agent/.env
+  #   depends_on:
+  #     - postgres
+  #     # - ollama
+  #   networks:
+  #     - apis
+
+
   apiresolver:
     image: koti21/apiresolver:v1.0.0
     container_name: apiresolver

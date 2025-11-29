@@ -31,6 +31,9 @@ var (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
+	CheckOrigin: func(r *http.Request) bool {
+		return true
+	},
 }
 
 type Client struct {
@@ -48,7 +51,7 @@ type Client struct {
 
 func (c *Client) readPump() {
 	defer func() {
-		c.orchestrator.Stream.CloseSend()
+		c.hub.unregister <- c
 		c.conn.Close()
 	}()
 
@@ -59,8 +62,10 @@ func (c *Client) readPump() {
 			break
 		}
 		if string(message) == "CLOSE_CONNECTION" {
-			c.orchestrator.Stream.CloseSend()
+			c.hub.unregister <- c
+			break
 		}
+
 		var rawAudio proto.RawAudio
 		rawAudio.AudioBytes = message
 		err = c.orchestrator.SendAudioPacket(&proto.StreamPacket_RawAudio{
@@ -69,15 +74,17 @@ func (c *Client) readPump() {
 		if err != nil {
 			log.Println("grpc send error:", err)
 		}
+
 	}
 }
 
 func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
+		c.hub.unregister <- c
 		ticker.Stop()
 		c.conn.Close()
-		print("connection closed" + c.UserID)
+		print("connection closed abnormally for user " + c.UserID + " session " + c.SessionID)
 	}()
 
 	for {

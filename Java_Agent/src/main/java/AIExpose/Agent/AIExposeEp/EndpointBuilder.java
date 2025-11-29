@@ -2,13 +2,11 @@ package AIExpose.Agent.AIExposeEp;
 
 import org.springframework.web.bind.annotation.*;
 import org.springframework.core.env.Environment;
-import org.springframework.stereotype.Component;
 
 import jakarta.servlet.ServletContext;
 
 import java.lang.reflect.*;
 
-@Component
 public class EndpointBuilder {
 
     private final Environment env;

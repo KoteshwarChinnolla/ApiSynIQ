@@ -6,24 +6,28 @@ from piper import PiperVoice, SynthesisConfig
 from Retrieval.FetchApi import AudioStream
 from Retrieval.data_pb2 import AudioChunk
 
+
+voice_models = {}
+
+class InitVoiceModels:
+    def __init__(self):
+        global voice_models
+        voices = ["kathleen", "kushal", "semaine"]
+        for voice in voices:
+            voice_models[voice] = PiperVoice.load(f"./Transcribe/Utils/{voice}/model.onnx")
+
 class SpeakTranscribe:
-    def __init__(self, max_chars: int = 150, audioChunk: AudioChunk = AudioChunk()):
+    def __init__(self, max_chars: int = 150, audioChunk: AudioChunk = None):
         self.audioChunk = audioChunk
-        self.max_chars = max_chars
+        self.max_chars = max_chars 
 
-        self.model_path = "./Transcribe/Utils/kathleen/model.onnx"
-        if audioChunk.audio_option:
-            self.model_path = f"./Transcribe/Utils/{audioChunk.audio_option}/model.onnx"
+        self.voice = voice_models[audioChunk.audio_option]
 
-        print("[INFO] Loading Piper model...")
-        self.voice = PiperVoice.load(self.model_path)
-        print("[INFO] Piper loaded.")
-
+        self.current_text = ""
         self.audioStream = AudioStream()
         self.text_queue = queue.Queue()
-        self.running = False
 
-        self.tts_thread = threading.Thread(target=self._tts_worker, daemon=True)
+        self.tts_worker_thread = None
 
         self.syn_config = SynthesisConfig(
             volume=1.0,
@@ -33,22 +37,43 @@ class SpeakTranscribe:
             normalize_audio=True,
         )
 
-    def _start(self):
-        if not self.running:
-            self.running = True
-            self.tts_thread.start()
+    def start(self):
+        self.text_queue = queue.Queue()
+        self.current_text = ""
 
-    def _stop(self):
-        self.running = False
-        self.text_queue.put(None)
-        self.tts_thread.join()
+        self.tts_worker_thread = threading.Thread(
+            target=self._tts_worker,
+            daemon=True
+        )
+        self.tts_worker_thread.start()
+        print("[TTS] Thread started")
+
+
+
+    def stop(self):
+        if self.tts_worker_thread and self.tts_worker_thread.is_alive():
+            print("[TTS] Thread is alive, stopping...")
+
+            if self.current_text:
+                print(f"[TTS] Flushing remaining text: {self.current_text}")
+                self.text_queue.put(self.current_text)
+
+            self.text_queue.put(None)
+            self.text_queue.join()
+
+        self.current_text = ""
+        self.text_queue = queue.Queue()
+
+        print("[TTS] Cleared and stopped")
 
     def _tts_worker(self):
         print("[TTS] Worker started")
 
         while True:
             text = self.text_queue.get()
+
             if text is None:
+                self.text_queue.task_done()
                 break
 
             print(f"[TTS] Synthesizing: {text}")
@@ -72,16 +97,24 @@ class SpeakTranscribe:
                 self.audioStream.push_chunk(send_to_grpc)
 
             self.audioStream.flush()
+            self.text_queue.task_done()
 
         print("[TTS] Worker stopped")
 
     def tts_worker(self, text: str):
-        print("[INFO] TTS text received:", text)
-        self._start()
-        self.text_queue.put(text.strip())
-        self.running=False
-        self.text_queue.put(None)
-        self.tts_thread.join()
+        """Collects text and sends complete sentences to queue."""
+
+        punctuation = {".", "!", "?"}
+
+        if text in punctuation:
+            sentence = (self.current_text + text).strip()
+            self.text_queue.put(sentence)
+            self.current_text = ""
+        else:
+            self.current_text += (" " + text if self.current_text else text)
+            print(self.current_text)
+
+
 
         
         

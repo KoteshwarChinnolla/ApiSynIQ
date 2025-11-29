@@ -72,7 +72,6 @@ function createWebSocket(fields) {
         logMessage("Connected");
     };
     socket.onclose = () =>{
-        socket.send("CLOSE_CONNECTION");
         logMessage("Connection Closed");
     };
     socket.onerror = (e) => logMessage("WS error: " + e);
@@ -165,20 +164,23 @@ async function startMicRecording(fields) {
 
     workletNode.port.onmessage = (event) => {
         const chunk = event.data;
-        pcmBuffer.push(chunk);
-        samplesCount += chunk.length;
-
-        // Send 1 second of PCM (16000 samples)
-        if (samplesCount >= SAMPLES_PER_SECOND) {
-            const merged = mergeChunks(pcmBuffer);
-
-            if (conn && conn.readyState === WebSocket.OPEN) {
-                conn.send(merged.buffer);
-            }
-
-            pcmBuffer = [];
-            samplesCount = 0;
+        if (conn && conn.readyState === WebSocket.OPEN) {
+            conn.send(chunk.buffer);
         }
+        // pcmBuffer.push(chunk);
+        // samplesCount += chunk.length;
+
+        // // Send 1 second of PCM (16000 samples)
+        // if (samplesCount >= SAMPLES_PER_SECOND) {
+        //     const merged = mergeChunks(pcmBuffer);
+
+        //     if (conn && conn.readyState === WebSocket.OPEN) {
+        //         conn.send(merged.buffer);
+        //     }
+
+        //     pcmBuffer = [];
+        //     samplesCount = 0;
+        // }
     };
 
     const source = audioCtxMic.createMediaStreamSource(micStream);

@@ -1,11 +1,9 @@
 
 from concurrent.futures import ThreadPoolExecutor
 
-from Transcribe.SpeechToText import TextTranscriber
-from Transcribe.TextToSpeech import SpeakTranscribe
+from Transcribe.SpeechToText import TextTranscriberVosk
 from . import data_pb2_grpc as grpc_services
-from .data_pb2 import IncomingAudio, AudioChunk
-
+from .data_pb2 import IncomingAudio, AudioChunk, RawAudio
 import grpc
 
 
@@ -33,8 +31,16 @@ class TTSServiceServicer(grpc_services.TTSServiceServicer):
     def get_session(self, session_id):
         if session_id not in self.sessions:
             print(f"[INFO] Creating new STT session for {session_id}")
-            self.sessions[session_id] = TextTranscriber()
+            self.sessions[session_id] = TextTranscriberVosk()
         return self.sessions[session_id]
+    
+    def remove_session(self, session_id):
+        if session_id in self.sessions:
+            del self.sessions[session_id]
+            print(f"[INFO] Session {session_id} removed")
+        else:
+            print(f"[INFO] Session {session_id} not found")
+        return
 
     def UploadAudio(self, request_iterator, context):
         print("[INFO] Started Receiving...")
@@ -61,8 +67,15 @@ class TTSServiceServicer(grpc_services.TTSServiceServicer):
 
                 stt_session.LoadAudio(audioChunk)
 
-            else:
-                final_text = stt_session.SpeechToText(chunk)
-                print(f"[{current_session_id}] -> {final_text}")
+            elif packet_type == "error":
+                print(f"[{current_session_id}] -> {chunk.error.error}")
+                stt_session.stop()
+                self.remove_session(current_session_id)
 
-        del self.sessions[current_session_id]
+            else:
+                if current_session_id is None:
+                    continue
+                stt_session = self.get_session(current_session_id)
+                final_text = stt_session.SpeechToTextVosk(chunk)
+
+                # print(f"[{current_session_id}] -> {final_text}")
