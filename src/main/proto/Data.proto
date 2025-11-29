@@ -1,0 +1,76 @@
+syntax = "proto3";
+
+package apisyniq;
+
+
+option java_multiple_files = true;
+option java_package = "com.apisyniq.grpc";
+option java_outer_classname = "ControllerOutputProto";
+
+message EndpointData {
+  string name = 1;
+  string endpoint = 2;
+  string httpMethod = 3;
+  repeated string tags = 4;
+  string description = 5;
+  string returnDescription = 6;
+  Inputs inputsDescribe = 7;
+  string responseBody = 8;
+  bool autoExecute = 9;
+  Inputs inputs = 10;
+  string outputBody = 11;
+  repeated string filteringTags = 12;
+  map<string, DtoSchema> dtoSchemas = 13;
+  map<string, Describe> describeDtosForParms= 14;
+  string globalPath = 15;
+}
+
+
+message Inputs {
+  map<string, string> inputBody = 1;
+  map<string, string> inputPathParams = 2;
+  map<string, string> inputQueryParams = 3;
+  map<string, string> inputVariables = 4;
+  map<string, string> inputHeaders = 5;
+  map<string, string> inputCookies = 6;
+}
+
+message DtoSchema {
+  string className = 1;
+  string name = 2;
+  string description = 3;
+  string example = 4;
+  repeated Describe fields = 5;
+}
+
+message Describe {
+  string name = 1;
+  string description = 2;
+  string dataType = 3;
+  string defaultValue = 4;
+  string options = 5;
+  bool autoExecute = 6;
+  string example = 7;
+}
+
+message InputsAndReturnsMatch {
+  repeated EndpointData inputsMatchData = 1;
+  repeated EndpointData returnMatchData = 2;
+}
+
+message repeatedInput {
+  repeated EndpointData inputs = 1;
+}
+
+message query{
+  string query=1;
+  int32 limit=2;
+}
+
+service Controller {
+  rpc searchMatchesForBoth(query) returns (InputsAndReturnsMatch);
+  rpc searchMatchesForInputDescription(query) returns (repeatedInput);
+  rpc searchMatchesForReturnDescription(query) returns (repeatedInput);
+  rpc save(EndpointData) returns (query);
+  rpc saveAll(repeatedInput) returns (query);
+}

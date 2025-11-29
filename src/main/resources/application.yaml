@@ -1,0 +1,9 @@
+grpc:
+  server:
+    port: 7320
+    enable-reflection: true
+
+spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
