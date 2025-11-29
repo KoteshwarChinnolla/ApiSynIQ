@@ -8,7 +8,6 @@ import java.util.*;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 
-@Component
 public class TypeResolver {
 
     /**

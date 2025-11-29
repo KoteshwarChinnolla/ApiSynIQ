@@ -1,8 +1,8 @@
-package AIExpose.Agent.Controller;
+package com.example.demo.controller;
 
 
 import AIExpose.Agent.Annotations.*;
-import AIExpose.Agent.Samples.CalendarDto;
+import com.example.demo.dtos.CalendarDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.time.*;

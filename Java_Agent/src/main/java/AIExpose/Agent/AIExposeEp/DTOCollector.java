@@ -1,6 +1,8 @@
 package AIExpose.Agent.AIExposeEp;
 
 
+import org.springframework.stereotype.Component;
+
 import java.lang.reflect.*;
 import java.util.*;
 

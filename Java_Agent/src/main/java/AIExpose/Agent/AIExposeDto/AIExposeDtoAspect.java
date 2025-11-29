@@ -17,7 +17,6 @@ import AIExpose.Agent.Dtos.*;
 //import AIExpose.Agent.Utils.ParamSchemaGenerator;
 
 
-@Component
 public class AIExposeDtoAspect {
     public static DtoSchema scan(Class<?> clazz) {
         DtoSchema dtoSchema = new DtoSchema();

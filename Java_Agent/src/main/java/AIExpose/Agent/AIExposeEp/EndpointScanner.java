@@ -28,7 +28,6 @@ import AIExpose.Agent.Annotations.*;
 //import AIExpose.Agent.Utils.ParamSchemaGenerator;
 import AIExpose.Agent.enums.ParamType;
 
-
 public class EndpointScanner {
 
     private final EndpointBuilder endpointBuilder;

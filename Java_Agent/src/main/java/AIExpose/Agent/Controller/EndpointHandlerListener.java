@@ -19,47 +19,41 @@ import AIExpose.Agent.Dtos.EndpointData;
 import java.lang.reflect.Method;
 import java.util.Map;
 
-@Component
 public class EndpointHandlerListener implements ApplicationListener<ContextRefreshedEvent> {
 
-    @Autowired
-    private RequestMappingHandlerMapping handlerMapping;
+    private final EndpointCache cache;
+    private final EndpointScanner scanner;
+    private final RequestMappingHandlerMapping handlerMapping;
 
-    @Autowired
-    private EndpointCache cache;
-
-    @Autowired
-    private EndpointScanner scanner;
+    public EndpointHandlerListener(EndpointCache cache,
+                                   EndpointScanner scanner,
+                                   RequestMappingHandlerMapping handlerMapping) {
+        this.cache = cache;
+        this.scanner = scanner;
+        this.handlerMapping = handlerMapping;
+    }
 
     @Override
     public void onApplicationEvent(ContextRefreshedEvent event) {
 
-        Map<RequestMappingInfo, HandlerMethod> handlers = handlerMapping.getHandlerMethods();
-
-        handlers.forEach((info, handlerMethod) -> {
-
+        handlerMapping.getHandlerMethods().forEach((info, handlerMethod) -> {
             Class<?> controllerClass = handlerMethod.getBeanType();
-            Method endpointMethod = handlerMethod.getMethod();
+            Method method = handlerMethod.getMethod();
 
-            AIExposeController controllerAnn =
-                    controllerClass.getAnnotation(AIExposeController.class);
+            AIExposeController cAnn = controllerClass.getAnnotation(AIExposeController.class);
+            AIExposeEpHttp eAnn = method.getAnnotation(AIExposeEpHttp.class);
 
-            AIExposeEpHttp endpointAnn =
-                    endpointMethod.getAnnotation(AIExposeEpHttp.class);
-
-            if (controllerAnn != null || endpointAnn != null) {
-
-                EndpointData data;
+            if (cAnn != null || eAnn != null) {
                 try {
-                  data = scanner.before(endpointMethod, endpointAnn, controllerAnn);
-                  cache.add(data);
-                } catch (JsonProcessingException e) {
-                  e.printStackTrace();
+                    EndpointData data = scanner.before(method, eAnn, cAnn);
+                    cache.add(controllerClass.getSimpleName(), method.getName(), data);
+                    cache.getGrpc(data);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-
             }
         });
-        System.out.print(cache);
     }
 }
+
 

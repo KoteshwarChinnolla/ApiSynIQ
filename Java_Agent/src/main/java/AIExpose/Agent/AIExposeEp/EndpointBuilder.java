@@ -1,5 +1,6 @@
 package AIExpose.Agent.AIExposeEp;
 
+import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.core.env.Environment;
 

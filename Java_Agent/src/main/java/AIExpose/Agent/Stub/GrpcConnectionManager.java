@@ -9,6 +9,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class GrpcConnectionManager {
 
+    public GrpcConnectionManager(){}
+
     private ManagedChannel channel;
     private ControllerGrpc.ControllerBlockingStub stub;
 

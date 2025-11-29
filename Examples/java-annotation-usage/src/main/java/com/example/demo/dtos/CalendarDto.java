@@ -1,4 +1,4 @@
-package AIExpose.Agent.Samples;
+package com.example.demo.dtos;
 
 
 import AIExpose.Agent.Annotations.*;
