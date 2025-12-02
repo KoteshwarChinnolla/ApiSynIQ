@@ -3,7 +3,6 @@ package stub
 import (
 	pb "ApiGateway/pkg/proto"
 	"log"
-
 	"google.golang.org/grpc"
 )
 
