@@ -401,7 +401,6 @@ class GraphWorkflow:
 # if __name__ == "__main__":
 #     # llm_model = ChatGroq(
 #     #     temperature=0.1,
-#     #     groq_api_key="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",
 #     #     model_name="llama-3.1-8b-instant" 
     
 #     # )
