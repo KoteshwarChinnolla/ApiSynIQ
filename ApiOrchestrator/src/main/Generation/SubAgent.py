@@ -1,4 +1,5 @@
 import os
+import uuid
 from dotenv import load_dotenv
 from typing_extensions import TypedDict,List,Dict,Any,Type 
 from langgraph.graph import StateGraph, START, END
@@ -12,6 +13,9 @@ from langchain.tools import tool, ToolRuntime
 from dataclasses import dataclass
 from Processing.StringToPydantic import GeneratePydantic
 from Generation.prompts import API_FILLING_PROMPT
+from Retrieval.FetchApi import AudioStream
+from .CheckPointer import checkpoint_exists, load_checkpoint, save_checkpoint, update_checkpoint
+from Retrieval.data_pb2 import Text,AudioChunk
 
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -22,16 +26,19 @@ class Context:
 
 @tool
 async def speak(text: str, runtime: ToolRuntime) -> str:
-  """Takes i the text and waits for the user to respond.
-  
-  Args:
-      text (str): The text to be spoken.
-  Returns:
-      str: The response from the user.
-  """
-  response = input(text)
-  runtime.state.history.append({"input": text, "output": response})
-  return response
+    """Takes i the text and waits for the user to respond.
+    
+    Args:
+        text (str): The text to be spoken.
+    Returns:
+        str: The response from the user.
+    """
+    runtime.state["pending_prompt"] = text
+    checkpoint_id = runtime.state["checkpoint_id"]
+    await update_checkpoint(runtime, checkpoint_id)
+    send_to_json = AudioChunk(audio_bytes=None, text=text, username=runtime.state["user_name"], session_id=runtime.state["session_id"], stream_id=runtime.state["checkpoint_id"], language="en-US", audio_option="", options={} )
+    AudioStream.push_chunk(send_to_json)
+    return {"tool_output": send_to_json.__dict__}
 
 @tool
 async def query_api(results: Dict, runtime: ToolRuntime) -> Dict:
@@ -49,29 +56,72 @@ class State(TypedDict):
     markdown: str
     combined: Any
     history: List[Dict[str, str]]
+    pending_prompt: str
+    checkpoint_id: str
+    user_name: str
+    session_id: str
+
 
 
 class SubAgent:
     def __init__(self,context:Context):
         self.context=context
-        self.llm_model=ChatGoogleGenerativeAI(model="gemini-2.0-flash",api_key=GEMINI_API_KEY)
-        self.memory = InMemorySaver()
+        self.llm_model=ChatGoogleGenerativeAI(model="gemini-2.0-flash",google_api_key=GEMINI_API_KEY)
         self.graph = self._build_graph()
         self.schema = {}
-    
+        self.agent = create_agent(
+            model=self.llm_model,
+            tools=[speak, query_api],
+            interrupt_before=["query_api"],
+            system_prompt=API_FILLING_PROMPT()
+        )
+        self.memory = InMemorySaver()
+
     def _build_graph(self):
         builder = StateGraph(State)
         builder.add_node("agent", self.Agent)
         builder.add_edge(START, "agent")
         builder.add_edge("agent", END)
-        return builder.compile(checkpointer=self.memory)
+        return builder.compile()
     
-    def Agent(self,state: State):
-        agent = create_agent(self.llm_model, tools=[speak, query_api], response_format=self.schema, interrupt_before=["query_api"])
-        result = self.model_selector(user_input=getattr(state, "request", ""))
-        prompt = API_FILLING_PROMPT(schema=result["schema"], model_card=result["model_card"])
-        output = agent.invoke(input=prompt)
-        print(output)
+    def Agent(self, state: State):
+        result = self.model_selector(state["request"])
+        self.context.context_data.update(result)
+
+        output = self.agent.invoke(
+            input={
+                "request": state["request"],
+                "schema": result["schema"],
+                "model_card": result["model_card"]
+            }
+        )
+
+        return {"markdown": output, "history": state["history"] + [output]}
+
+    async def run(self, chunk: Text) -> State:
+        user_input = chunk.text
+        session_id = chunk.session_id
+        stream_id = chunk.stream_id
+        if stream_id and checkpoint_exists(stream_id):
+            saved = load_checkpoint(stream_id)
+            if not saved:
+                raise RuntimeError("No checkpoint found")
+            state = saved["state"]
+            state["request"] = user_input
+            state["history"].append({"input": state.get("pending_prompt"), "output": user_input})
+            state.pop("pending_prompt", None)
+            result = await self.graph.invoke(state, checkpoint_id=stream_id)
+            return result
+        state = {
+            "request": user_input,
+            "markdown": "",
+            "combined": None,
+            "history": [],
+            "checkpoint_id": stream_id,
+            "user_name": chunk.username,
+            "session_id": session_id
+        }
+        return await self.graph.invoke(state)
 
     def model_selector(self,user_input: str):
 
@@ -129,7 +179,7 @@ class SubAgent:
         headers =selected_inputs.input.inputHeaders
         cookies =selected_inputs.input.inputCookies
 
-        self.schema_classes[selected_api] = {
+        self.schema = {
             "body":body,
             "params": params,
             "query": query,
@@ -142,12 +192,12 @@ class SubAgent:
         "name": selected_api,
         "model_card":selected_markdown,
         "schema": {
-            "inputBody": body.model_json_schema() if body else None,
-            "inputPathParams": params.model_json_schema() if params else None,
-            "inputQueryParams": query.model_json_schema() if query else None,
-            "inputVariables":variables.model_json_schema() if variables else None,
-            "inputHeaders":headers.model_json_schema() if headers else None,
-            "inputCookies":cookies.model_json_schema() if cookies else None
+            "body": body.model_json_schema() if body else None,
+            "params": params.model_json_schema() if params else None,
+            "query": query.model_json_schema() if query else None,
+            "variables":variables.model_json_schema() if variables else None,
+            "headers":headers.model_json_schema() if headers else None,
+            "cookies":cookies.model_json_schema() if cookies else None
             },
         }
 
