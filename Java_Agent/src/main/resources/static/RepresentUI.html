@@ -57,8 +57,11 @@
     </div>
     <div id="apiResolver" style="display: none;">
       <div class="connect-box-container" , id="connectBox">
-        <input type="text" id="apiUrl" placeholder="Enter API Base URL (e.g. http://localhost:7321/SynIq/api)">
-        <button id="connectBtn">Connect</button>
+        <input type="text" id="apiUrl" style="display: none;" placeholder="Enter API Base URL (e.g. http://localhost:7321/SynIq/api)">
+        <p style="border: 10px;">Default: http://localhost:7321/</p>
+        <button id="editEndpoint">edit</button>
+        <button id="connectBtn">Check Availability</button>
+        <button id="saveAll">Save All</button>
       </div>
 
       <div id="status"></div>
@@ -75,7 +78,6 @@
 
         <button id="runBtn" class="query-run">Run</button>
       </div>
-
     </div>
 
     <main id="main">

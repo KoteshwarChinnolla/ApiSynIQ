@@ -18,6 +18,7 @@ type Hub struct {
 	Broadcast  chan *proto.AudioChunk
 	register   chan *Client
 	unregister chan *Client
+	update     chan *Client
 }
 
 func NewHub() {
@@ -25,6 +26,7 @@ func NewHub() {
 		Broadcast:  make(chan *proto.AudioChunk),
 		register:   make(chan *Client),
 		unregister: make(chan *Client),
+		update:     make(chan *Client),
 		clients:    make(map[string]*Client),
 	}
 }
@@ -44,12 +46,17 @@ func (h *Hub) removeClient(SessionID string, client *Client) {
 	error.StreamId = client.StreamID
 	error.Language = client.Language
 	err := client.orchestrator.Stream.Send(&proto.StreamPacket{Packet: &proto.StreamPacket_Error{Error: &error}})
-	// client.orchestrator.Stream.CloseSend()
 	if err != nil {
-		log.Print(err)
+		log.Printf("error at removeClient %s", err)
 	}
 	delete(h.clients, SessionID)
 	close(client.send)
+}
+
+func (h *Hub) updateClient(SessionID string, client *Client) {
+	delete(h.clients, SessionID)
+	h.clients[SessionID] = client
+	log.Printf("Client Updated for SessionId %s", SessionID)
 }
 
 func (h *Hub) Run() {
@@ -61,6 +68,10 @@ func (h *Hub) Run() {
 			if _, ok := h.clients[client.SessionID]; ok {
 				h.removeClient(client.SessionID, client)
 				log.Printf("connection closed %s for session %s", client.UserID, client.SessionID)
+			}
+		case client := <-h.update:
+			if _, ok := h.clients[client.SessionID]; ok {
+				h.updateClient(client.SessionID, client)
 			}
 		case message := <-h.Broadcast:
 			h.broadcastAudio(message)

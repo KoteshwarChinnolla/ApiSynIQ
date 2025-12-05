@@ -22,7 +22,6 @@ func CreateWebServer() {
 	stub.InitConnection()
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/", fs)
-	// http.HandleFunc("/", serveHome)
 	http.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		ws.ServeWs(hub, w, r)
 	})

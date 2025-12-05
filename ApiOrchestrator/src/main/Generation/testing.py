@@ -1,8 +1,7 @@
 from Retrieval.data_pb2 import query
 from Retrieval.GrpcServer import GrpcServer
+from Transcribe.STT.Factory import InitTextModelsWhisper
 from Transcribe.TextToSpeech import InitVoiceModels
-from Transcribe.SpeechToText import InitTextModels
-
 def inspect_model(model):
     print("\n=== CLASS INFO ===")
     print("Name:", model.__name__)
@@ -46,5 +45,5 @@ query = query(query="get calender details", limit=2)
 if __name__ == "__main__":
         
     InitVoiceModels()
-    InitTextModels()
+    InitTextModelsWhisper()
     GrpcServer()

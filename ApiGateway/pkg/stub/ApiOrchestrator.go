@@ -2,8 +2,8 @@ package stub
 
 import (
 	pb "ApiGateway/pkg/proto"
-	"log"
 	"google.golang.org/grpc"
+	"log"
 )
 
 var (
@@ -29,5 +29,9 @@ func InitConnection() {
 }
 
 func (a *ApiOrchestrator) SendAudioPacket(packet *pb.StreamPacket_RawAudio) error {
+	return a.Stream.Send(&pb.StreamPacket{Packet: packet})
+}
+
+func (a *ApiOrchestrator) SendTextPacket(packet *pb.StreamPacket_Text) error {
 	return a.Stream.Send(&pb.StreamPacket{Packet: packet})
 }

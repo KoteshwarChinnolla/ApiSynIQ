@@ -1,17 +1,39 @@
 let apiJson = null;
 let endpoints = [];
+resolverUrl = "http://localhost:7321"
 fetchAndRender();
      // ---- EVENT HANDLERS ----
 document.getElementById("connectBtn").onclick = connectToApi;
 document.getElementById("runBtn").onclick = runQuery;
+document.getElementById("editEndpoint").onclick = editEndpoint;
 
 
-function showApiResolver(){
+editEndpoint = () => {
+  const inputBox = document.getElementById("apiUrl");
+  inputBox.style.display = inputBox.style.display === 'none' ? 'block' : 'none';
+  editEndpoint = document.getElementById("editEndpoint");
+  editEndpoint.innerHTML = editEndpoint.innerHTML === 'edit' ? 'done' : 'edit';
+  if(editEndpoint.innerHTML === 'edit'){
+    connectToApi();
+  }
+}
+async function showApiResolver(){
   const apiResolver = document.getElementById("apiResolver");
   const search = document.getElementById("search");
   const querySection = document.getElementById("querySection");
-  apiResolver.style.display = apiResolver.style.display === 'none' ? 'block' : 'none';
+  // apiResolver.style.display = apiResolver.style.display === 'none' ? 'block' : 'none';
   querySection.style.display = querySection.style.display === 'none' ? 'block' : 'none';
+  if(apiResolver.style.display == 'block'){
+    apiResolver.style.display = 'none';
+  }
+  else {
+    const baseUrl = window.location.origin;
+    res = await fetch(`${baseUrl}/ApiSynIQ/connect`);
+    text = await res.text();
+    if(text == "true"){
+      apiResolver.style.display = 'block';
+    }
+  }
   // search.style.display = search.style.display === 'none' ? 'block' : 'none';
 }
 
@@ -30,7 +52,7 @@ async function connectToApi() {
 
   statusEl.textContent = "Connecting...";
   try {
-    const res = await fetch(`${apiUrl}/SynIq/api/active`);
+    const res = await fetch(`${resolverUrl}/SynIq/api/active`);
     const text = await res.text();
     if (text === "true") {
       statusEl.textContent = "✅ Connected to API Resolver";
@@ -140,7 +162,7 @@ async function callEndpoint(url, payload, label) {
 
 async function fetchAndRender() {
   const baseUrl = window.location.origin;
-  const url = `${baseUrl}/endpoints-info`;
+  const url = `${baseUrl}/ApiSynIQ/endpoints-info`;
   const grid = document.getElementById("grid");
   const empty = document.getElementById("empty");
 
