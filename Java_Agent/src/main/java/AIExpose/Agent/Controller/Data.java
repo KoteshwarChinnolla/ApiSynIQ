@@ -125,6 +125,7 @@ import java.lang.reflect.Method;
 import java.util.*;
 
 @RestController
+@RequestMapping(value = "/ApiSynIQ")
 public class Data {
 
     private final EndpointCache cache;

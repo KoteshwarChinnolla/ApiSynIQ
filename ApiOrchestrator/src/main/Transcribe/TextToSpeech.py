@@ -27,8 +27,8 @@ class SpeakTranscribe:
         self.audioStream = AudioStream()
         self.text_queue = queue.Queue()
 
-        self.tts_worker_thread = None
-
+        self.tts_worker_thread = threading.Thread(target=self._tts_worker, daemon=True)
+        self.tts_worker_thread.start()
         self.syn_config = SynthesisConfig(
             volume=1.0,
             length_scale=1.0,
@@ -37,20 +37,8 @@ class SpeakTranscribe:
             normalize_audio=True,
         )
 
-    def start(self):
-        self.text_queue = queue.Queue()
-        self.current_text = ""
-
-        self.tts_worker_thread = threading.Thread(
-            target=self._tts_worker,
-            daemon=True
-        )
-        self.tts_worker_thread.start()
-        print("[TTS] Thread started")
-
-
-
     def stop(self):
+        print("[TTS] Stop request received...")
         if self.tts_worker_thread and self.tts_worker_thread.is_alive():
             print("[TTS] Thread is alive, stopping...")
 
@@ -62,12 +50,26 @@ class SpeakTranscribe:
             self.text_queue.join()
 
         self.current_text = ""
-        self.text_queue = queue.Queue()
+        self.clear_queue(self.text_queue)
 
         print("[TTS] Cleared and stopped")
 
+    def clear_queue(self, q: queue.Queue):
+        while not q.empty():
+            try:
+                q.get_nowait()
+                q.task_done()
+            except queue.Empty:
+                break
+
+    
+    def stopAbnormally(self):
+        self.current_text = ""
+        self.clear_queue(self.text_queue)
+
+
     def _tts_worker(self):
-        print("[TTS] Worker started")
+        print("[TTS] worker started")
 
         while True:
             text = self.text_queue.get()
@@ -106,13 +108,15 @@ class SpeakTranscribe:
 
         punctuation = {".", "!", "?"}
 
-        if text in punctuation:
+        if text[-1] in punctuation:
             sentence = (self.current_text + text).strip()
+            print(sentence)
             self.text_queue.put(sentence)
+            
             self.current_text = ""
         else:
             self.current_text += (" " + text if self.current_text else text)
-            print(self.current_text)
+            # print(self.current_text)
 
 
 

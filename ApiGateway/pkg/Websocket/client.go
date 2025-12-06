@@ -47,11 +47,11 @@ type Client struct {
 	Language     string
 	AudioOption  string
 	Options      map[string]string
+	mode         string
 }
 
 func (c *Client) readPump() {
 	defer func() {
-		c.hub.unregister <- c
 		c.conn.Close()
 	}()
 
@@ -61,49 +61,64 @@ func (c *Client) readPump() {
 			log.Println("ws read error:", err)
 			break
 		}
+
+		if string(message) == "START_AUDIO_CONNECTION" {
+			log.Printf("Updating to Audio")
+			c.mode = "AUDIO"
+			c.hub.update <- c
+			continue
+		}
 		if string(message) == "CLOSE_CONNECTION" {
 			c.hub.unregister <- c
 			break
 		}
 
-		var rawAudio proto.RawAudio
-		rawAudio.AudioBytes = message
-		err = c.orchestrator.SendAudioPacket(&proto.StreamPacket_RawAudio{
-			RawAudio: &rawAudio,
-		})
-		if err != nil {
-			log.Println("grpc send error:", err)
+		if c.mode == "AUDIO" {
+			var rawAudio proto.RawAudio
+			rawAudio.AudioBytes = message
+			err = c.orchestrator.SendAudioPacket(&proto.StreamPacket_RawAudio{
+				RawAudio: &rawAudio,
+			})
+			if err != nil {
+				log.Println("grpc send error:", err)
+			}
+			continue
 		}
 
+		if c.mode == "CHAT" {
+			var text proto.Text
+			err := json.Unmarshal(message, &text)
+			if err != nil {
+				log.Printf("cant not unmarshal the message with session")
+				continue
+			}
+			err = c.orchestrator.SendTextPacket(&proto.StreamPacket_Text{
+				Text: &text,
+			})
+			if err != nil {
+				log.Println("grpc send error:", err)
+			}
+			continue
+		}
 	}
 }
 
 func (c *Client) writePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
-		c.hub.unregister <- c
-		ticker.Stop()
-		c.conn.Close()
-		print("connection closed abnormally for user " + c.UserID + " session " + c.SessionID)
 	}()
-
 	for {
 		select {
 		case audioBytes, ok := <-c.send:
 			if !ok {
-				// channel closed
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-
-			// SEND **binary audio** to browser
-			// err := c.conn.WriteMessage(websocket.BinaryMessage, audioBytes)
 			err := c.conn.WriteJSON(audioBytes)
 			if err != nil {
 				log.Println("write error:", err)
 				return
 			}
-
 		case <-ticker.C:
 			_ = c.conn.WriteMessage(websocket.PingMessage, []byte("ping"))
 		}
@@ -134,6 +149,7 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	client.StreamID = incoming.StreamId
 	client.AudioOption = incoming.AudioOption
 	client.SessionID = incoming.SessionId
+	client.mode = "CHAT"
 	client.hub.register <- client
 
 	stream.Send(&proto.StreamPacket{Packet: &proto.StreamPacket_AudioIn{

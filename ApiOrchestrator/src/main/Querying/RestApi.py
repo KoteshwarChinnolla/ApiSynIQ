@@ -19,14 +19,18 @@ class RequestApi:
 
         # e.g., /user/{id}  →  /user/123
         if inp.inputPathParams:
-            print("inp.inputPathParams", inp.inputPathParams)
-            for key, value in inp.inputPathParams.items(): 
+            # print("inp.inputPathParams", inp.inputPathParams)
+            temp=json.loads(inp.inputPathParams)
+            print(temp)
+            for key, value in temp.items(): 
                 url = url.replace(f"{{{key}}}", str(value))
         print("Final URL:", url)
 
         # Query Params
-        query_params = inp.inputQueryParams or {}
+        query_params = json.loads(str(inp.inputQueryParams)) or {}
+
         if query_params:
+            # print("inp.inputQueryParams", query_params)
             url = f"{url}?{urlencode(query_params)}"
 
         # Headers / Cookies
