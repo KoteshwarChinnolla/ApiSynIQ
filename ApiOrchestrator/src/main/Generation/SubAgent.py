@@ -51,6 +51,15 @@ class Schema(BaseModel):
     headers: Any = None
     cookies: Any = None
 
+class Schema(BaseModel):
+    """Each of variables contains the pydantic model for the parameter required by the API."""
+    body: Any = None
+    param: Any = None
+    query: Any = None
+    variables: Any = None
+    headers: Any = None
+    cookies: Any = None
+
 @dataclass
 class Context:
   context_data:Dict
@@ -219,3 +228,13 @@ class SubAgent:
     
 
 
+subAgent = SubAgent()
+graph = subAgent.graph
+async def run(chunk: Text) -> State:
+    state = {
+        "request": chunk.user_input,
+        "stream_id  ": chunk.stream_id,
+        "user_name": chunk.username,
+        "session_id": chunk.session_id
+    }
+    return await graph.invoke(state)
