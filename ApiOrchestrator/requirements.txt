@@ -6,4 +6,4 @@ requests
 
 # python -m grpc_tools.protoc     --proto_path=src\main\Retrieval\proto\     --python_out=src\main\Retrieval     --pyi_out=src\main\Retrieval     --grpc_python_out=src\main\Retrieval    src\main\Retrieval\proto\data.proto
 # cd src/main
-# python -m Generation.testing
+# python -m Generation.testSubAgent

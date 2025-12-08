@@ -94,10 +94,10 @@ async function handleIncomingAudio(evt) {
     }
 
     if (msg.text) {
-        logMessage(msg.text);
+        logMessage("Respoe :" + msg.text);
     }
 
-    if (!msg.audio_bytes) {
+    if (!msg.audio_bytes || !msg.sample_rate || !msg.channels || msg.audio_bytes.length === 0) {
         return;
     }
 

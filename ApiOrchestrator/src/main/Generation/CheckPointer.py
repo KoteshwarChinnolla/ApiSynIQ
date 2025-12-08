@@ -12,6 +12,7 @@ async def save_checkpoint(runtime, checkpoint_id: str):
     }
 
 def load_checkpoint(checkpoint_id: str) -> Dict:
+    
     return CHECKPOINT_STORE.get(checkpoint_id)
 
 def checkpoint_exists(checkpoint_id: str) -> bool:
@@ -23,10 +24,10 @@ def delete_checkpoint(checkpoint_id: str):
 
 def update_checkpoint(runtime, checkpoint_id: str):
     if checkpoint_id in CHECKPOINT_STORE:
-        CHECKPOINT_STORE[checkpoint_id]["state"] = dict(runtime.state)
+        CHECKPOINT_STORE[checkpoint_id]["state"] = dict(runtime)
     else:
       CHECKPOINT_STORE[checkpoint_id] = {
-          "state": dict(runtime.state),
+          "state": dict(runtime),
           "graph_pointer": getattr(runtime, "graph_pointer", None),
           "agent_memory": getattr(runtime, "memory_snapshot", None),
       }

@@ -12,123 +12,145 @@ from Querying.RestApi import RequestApi
 from langchain.tools import tool, ToolRuntime 
 from dataclasses import dataclass
 from Processing.StringToPydantic import GeneratePydantic
-from Generation.prompts import API_FILLING_PROMPT
+from .prompts import API_FILLING_PROMPT, System_Prompt_Resolver, make_api_prompt
 from Retrieval.FetchApi import AudioStream
+from .Tools import speak, query_api
 from .CheckPointer import checkpoint_exists, load_checkpoint, save_checkpoint, update_checkpoint
 from Retrieval.data_pb2 import Text,AudioChunk
+from Retrieval import data_pb2 as grpc_data
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
+# from langchain_groq import ChatGroq
+from langchain_aws import ChatBedrockConverse
+from langchain.agents.middleware import before_model, after_model, AgentState
+from langgraph.runtime import Runtime
+
+
+@after_model
+def saveContext(state: AgentState, runtime: Runtime) -> dict[str, Any] | None:
+    update_checkpoint(runtime, runtime.state["stream_id"])
+    print(f"Model returned: {state['messages'][-1].content}")
+    return None
+
 
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+# os.environ["GROQ_API_KEY"] = os.getenv("GROQ_API_KEY")
+
+aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+aws_region = os.getenv("AWS_REGION")
+
+
+class Schema(BaseModel):
+    """Each of variables contains the pydantic model for the parameter required by the API."""
+    body: Any = None
+    param: Any = None
+    query: Any = None
+    variables: Any = None
+    headers: Any = None
+    cookies: Any = None
 
 @dataclass
 class Context:
   context_data:Dict
 
-@tool
-async def speak(text: str, runtime: ToolRuntime) -> str:
-    """Takes i the text and waits for the user to respond.
-    
-    Args:
-        text (str): The text to be spoken.
-    Returns:
-        str: The response from the user.
-    """
-    runtime.state["pending_prompt"] = text
-    checkpoint_id = runtime.state["checkpoint_id"]
-    await update_checkpoint(runtime, checkpoint_id)
-    send_to_json = AudioChunk(audio_bytes=None, text=text, username=runtime.state["user_name"], session_id=runtime.state["session_id"], stream_id=runtime.state["checkpoint_id"], language="en-US", audio_option="", options={} )
-    AudioStream.push_chunk(send_to_json)
-    return {"tool_output": send_to_json.__dict__}
-
-@tool
-async def query_api(results: Dict, runtime: ToolRuntime) -> Dict:
-  """Takes in the Parmeters and returns the response from the API.
-  
-  Args:
-      results (Dict): The parameters to be passed to the API.
-  Returns:
-      Dict: The response from the API.
-  """
-  return {"output": results}
 
 class State(TypedDict):
-    request: str
-    markdown: str
-    combined: Any
-    history: List[Dict[str, str]]
-    pending_prompt: str
-    checkpoint_id: str
-    user_name: str
-    session_id: str
-
+    request: str = ""
+    response: str = ""
+    markdown: str = ""
+    history: List[Dict[str, str]] = []
+    pending_prompt: str = ""
+    stream_id: str = ""
+    user_name: str = ""
+    session_id: str = ""
+    context: Context = Context(context_data={})
 
 
 class SubAgent:
-    def __init__(self,context:Context):
-        self.context=context
-        self.llm_model=ChatGoogleGenerativeAI(model="gemini-2.0-flash",google_api_key=GEMINI_API_KEY)
+    def __init__(self):
+
+        # self.llm_model = ChatGoogleGenerativeAI(
+        #     model="gemini-2.0-flash",
+        #     google_api_key=GEMINI_API_KEY
+        # )
+        # self.llm_model = ChatGroq(
+        #     model="openai/gpt-oss-120b"
+        # )
+        self.llm_model = ChatBedrockConverse(
+            model="openai.gpt-oss-safeguard-20b",
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=aws_region
+        )
+        
         self.graph = self._build_graph()
-        self.schema = {}
+
         self.agent = create_agent(
             model=self.llm_model,
-            tools=[speak, query_api],
-            interrupt_before=["query_api"],
-            system_prompt=API_FILLING_PROMPT()
+            system_prompt=System_Prompt_Resolver,
+            middleware=[saveContext]
         )
-        self.memory = InMemorySaver()
 
-    def _build_graph(self):
+
+    def _build_graph(self) -> StateGraph:
         builder = StateGraph(State)
         builder.add_node("agent", self.Agent)
         builder.add_edge(START, "agent")
         builder.add_edge("agent", END)
         return builder.compile()
     
-    def Agent(self, state: State):
-        result = self.model_selector(state["request"])
-        self.context.context_data.update(result)
+    async def Agent(self, state: State):
 
-        output = self.agent.invoke(
-            input={
-                "request": state["request"],
-                "schema": result["schema"],
-                "model_card": result["model_card"]
-            }
-        )
+        user_input = state["request"]
+        stream_id = state.get("stream_id")
 
-        return {"markdown": output, "history": state["history"] + [output]}
-
-    async def run(self, chunk: Text) -> State:
-        user_input = chunk.text
-        session_id = chunk.session_id
-        stream_id = chunk.stream_id
         if stream_id and checkpoint_exists(stream_id):
+
             saved = load_checkpoint(stream_id)
+
             if not saved:
                 raise RuntimeError("No checkpoint found")
+            
             state = saved["state"]
-            state["request"] = user_input
-            state["history"].append({"input": state.get("pending_prompt"), "output": user_input})
+            state["history"].append(
+                {"input": state.get("pending_prompt"), "output": user_input})
             state.pop("pending_prompt", None)
-            result = await self.graph.invoke(state, checkpoint_id=stream_id)
-            return result
-        state = {
-            "request": user_input,
-            "markdown": "",
-            "combined": None,
-            "history": [],
-            "checkpoint_id": stream_id,
-            "user_name": chunk.username,
-            "session_id": session_id
-        }
-        return await self.graph.invoke(state)
+
+        if state["context"] and state["context"].context_data.get("schema") is None:
+            result = self.model_selector(state["request"])
+            state["context"].context_data.update(result)
+        else:
+            result = state["context"].context_data
+
+
+        SystemMessage = f"""
+        Here are the schema and model card for the API to be filled:
+        Schema: {result["schema"]}
+        Model Card: {result["model_card"]}
+        """
+        messages = make_api_prompt(SystemMessage, state["history"], state["request"])
+        llm_output = await self.llm_model.ainvoke(messages)
+        print(f"\n🤖 LLM Output: {llm_output.content}")
+        new_history = state["history"]
+        new_history.append(("human", user_input))
+        new_history.append(("ai", llm_output.content))
+
+        state["response"] = llm_output.content
+        state["markdown"] = result["model_card"]
+        state["history"] = new_history
+        state["pending_prompt"] = llm_output.content
+
+        await update_checkpoint(state, stream_id)
+        return state
 
     def model_selector(self,user_input: str):
 
         gen=GeneratePydantic()
 
         user_input = user_input
-        a = query(query=user_input, limit=3)
+        a = grpc_data.query(query=user_input, limit=3)
         fetched_results=gen.Fetch(a,"RETURN")
 
         if not fetched_results:
@@ -154,7 +176,9 @@ class SubAgent:
         Respond with EXACTLY one of: 1, 2, or 3.Do NOT explain your answer.
         Just output the best matching API number.give me the best that suits the user query.
         """
-        llm_choice = self.llm_model.invoke(selection_prompt).content.strip()
+        llm_ans = self.llm_model.invoke(selection_prompt)
+        print(f"\n🤖 LLM selected API option: {llm_ans}")
+        llm_choice = llm_ans.content
 
         if llm_choice == "1":
             selected_api = api1
@@ -179,25 +203,19 @@ class SubAgent:
         headers =selected_inputs.input.inputHeaders
         cookies =selected_inputs.input.inputCookies
 
-        self.schema = {
-            "body":body,
-            "params": params,
-            "query": query,
-            "variables": variables,
-            "headers": headers,
-            "cookies": cookies
-        }
-        self.object_store[selected_api]=selected_inputs
+        schema = Schema(
+            body=body.model_json_schema() if body else None,
+            params=params.model_json_schema() if params else None,
+            query=query.model_json_schema() if query else None,
+            variables=variables.model_json_schema() if variables else None,
+            headers=headers.model_json_schema() if headers else None,
+            cookies=cookies.model_json_schema() if cookies else None
+        ).__dict__
         return {
-        "name": selected_api,
-        "model_card":selected_markdown,
-        "schema": {
-            "body": body.model_json_schema() if body else None,
-            "params": params.model_json_schema() if params else None,
-            "query": query.model_json_schema() if query else None,
-            "variables":variables.model_json_schema() if variables else None,
-            "headers":headers.model_json_schema() if headers else None,
-            "cookies":cookies.model_json_schema() if cookies else None
-            },
+            "name": selected_api,
+            "model_card":selected_markdown,
+            "schema": schema
         }
+    
+
 

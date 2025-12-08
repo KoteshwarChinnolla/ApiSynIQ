@@ -9,3 +9,5 @@ metadata json,
 embedding vector(1536)
 );
 CREATE INDEX ON vector_store USING HNSW (embedding vector_cosine_ops);
+
+CREATE DATABASE IF NOT EXISTS apisyniq;

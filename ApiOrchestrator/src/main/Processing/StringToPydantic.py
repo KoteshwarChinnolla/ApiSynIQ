@@ -300,10 +300,12 @@ class GeneratePydantic:
         return "\n".join(md)
 
 
-    def Fetch(self, q: query) -> Dict[str, Inputs]:
+    def Fetch(self, q: query, FetchType: Literal["INPUT", "RETURN"]) -> Dict[str, Inputs]:
         results: Dict[str, Inputs] = {}
-
-        objects = self.fetchApi.searchMatchesForInputDescription(q)
+        if(FetchType == "RETURN"):
+            objects = self.fetchApi.searchMatchesForReturnDescription(q)
+        else:
+            objects = self.fetchApi.searchMatchesForInputDescription(q)
 
         items = list(objects.inputs)
         if not items:
