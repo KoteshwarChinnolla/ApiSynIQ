@@ -20,25 +20,40 @@ from Retrieval.data_pb2 import Text,AudioChunk
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+class Schema(BaseModel):
+    """Each of variables contains the pydantic model for the parameter required by the API."""
+    body: Any = None
+    param: Any = None
+    query: Any = None
+    variables: Any = None
+    headers: Any = None
+    cookies: Any = None
+
 @dataclass
 class Context:
   context_data:Dict
 
-@tool
-async def speak(text: str, runtime: ToolRuntime) -> str:
-    """Takes i the text and waits for the user to respond.
-    
-    Args:
-        text (str): The text to be spoken.
-    Returns:
-        str: The response from the user.
-    """
-    runtime.state["pending_prompt"] = text
-    checkpoint_id = runtime.state["checkpoint_id"]
-    await update_checkpoint(runtime, checkpoint_id)
-    send_to_json = AudioChunk(audio_bytes=None, text=text, username=runtime.state["user_name"], session_id=runtime.state["session_id"], stream_id=runtime.state["checkpoint_id"], language="en-US", audio_option="", options={} )
-    AudioStream.push_chunk(send_to_json)
-    return {"tool_output": send_to_json.__dict__}
+# @tool
+# async def speak(text: str, runtime: ToolRuntime) -> Dict:
+#     runtime.state["pending_prompt"] = text
+#     checkpoint_id = runtime.state["checkpoint_id"]
+
+#     await update_checkpoint(runtime, checkpoint_id)
+
+#     send_to_json = AudioChunk(
+#         audio_bytes=None,
+#         text=text,
+#         username=runtime.state["user_name"],
+#         session_id=runtime.state["session_id"],
+#         stream_id=runtime.state["checkpoint_id"],
+#         language="en-US",
+#         audio_option="",
+#         options={}
+#     )
+
+#     AudioStream.push_chunk(send_to_json)
+#     return {"tool_output": send_to_json.__dict__}
+
 
 @tool
 async def query_api(results: Dict, runtime: ToolRuntime) -> Dict:
@@ -52,30 +67,31 @@ async def query_api(results: Dict, runtime: ToolRuntime) -> Dict:
   return {"output": results}
 
 class State(TypedDict):
-    request: str
-    markdown: str
-    combined: Any
-    history: List[Dict[str, str]]
-    pending_prompt: str
-    checkpoint_id: str
-    user_name: str
-    session_id: str
-
+    request: str = ""
+    markdown: str = ""
+    history: List[Dict[str, str]] = []
+    pending_prompt: str = ""
+    stream_id: str = ""
+    user_name: str = ""
+    session_id: str = ""
+    context: Context = {}
 
 
 class SubAgent:
-    def __init__(self,context:Context):
-        self.context=context
-        self.llm_model=ChatGoogleGenerativeAI(model="gemini-2.0-flash",google_api_key=GEMINI_API_KEY)
-        self.graph = self._build_graph()
-        self.schema = {}
+    def __init__(self):
+        self.llm_model = ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash",
+            google_api_key=GEMINI_API_KEY
+        )
+        
         self.agent = create_agent(
             model=self.llm_model,
-            tools=[speak, query_api],
-            interrupt_before=["query_api"],
-            system_prompt=API_FILLING_PROMPT()
+            tools=[query_api],
+            system_prompt=API_FILLING_PROMPT({}, "")
         )
-        self.memory = InMemorySaver()
+
+        self.graph = self._build_graph()
+
 
     def _build_graph(self):
         builder = StateGraph(State)
@@ -84,44 +100,33 @@ class SubAgent:
         builder.add_edge("agent", END)
         return builder.compile()
     
-    def Agent(self, state: State):
-        result = self.model_selector(state["request"])
-        self.context.context_data.update(result)
-
-        output = self.agent.invoke(
-            input={
-                "request": state["request"],
-                "schema": result["schema"],
-                "model_card": result["model_card"]
-            }
-        )
-
-        return {"markdown": output, "history": state["history"] + [output]}
-
-    async def run(self, chunk: Text) -> State:
-        user_input = chunk.text
-        session_id = chunk.session_id
-        stream_id = chunk.stream_id
+    async def Agent(self, state: State):
+        user_input = state["request"]
+        stream_id = state["stream_id"]   
         if stream_id and checkpoint_exists(stream_id):
             saved = load_checkpoint(stream_id)
             if not saved:
                 raise RuntimeError("No checkpoint found")
             state = saved["state"]
-            state["request"] = user_input
             state["history"].append({"input": state.get("pending_prompt"), "output": user_input})
             state.pop("pending_prompt", None)
-            result = await self.graph.invoke(state, checkpoint_id=stream_id)
-            return result
-        state = {
-            "request": user_input,
-            "markdown": "",
-            "combined": None,
-            "history": [],
-            "checkpoint_id": stream_id,
-            "user_name": chunk.username,
-            "session_id": session_id
+
+        if state["context"].context_data.get("schema") is None:
+            result = self.model_selector(state["request"])
+            state["context"].context_data.update(result)
+        else:
+            result = state["context"].context_data
+
+        output = await self.agent.ainvoke({
+            "request": state["request"],
+            "schema": result["schema"],
+            "model_card": result["model_card"]
+        })
+
+        return {
+            "markdown": result["markdown"],
+            "history": state["history"] + [output]
         }
-        return await self.graph.invoke(state)
 
     def model_selector(self,user_input: str):
 
@@ -179,25 +184,27 @@ class SubAgent:
         headers =selected_inputs.input.inputHeaders
         cookies =selected_inputs.input.inputCookies
 
-        self.schema = {
-            "body":body,
-            "params": params,
-            "query": query,
-            "variables": variables,
-            "headers": headers,
-            "cookies": cookies
-        }
-        self.object_store[selected_api]=selected_inputs
+        schema = Schema(
+            body=body.model_json_schema() if body else None,
+            param=params.model_json_schema() if params else None,
+            query=query.model_json_schema() if query else None,
+            variables=variables.model_json_schema() if variables else None,
+            headers=headers.model_json_schema() if headers else None,
+            cookies=cookies.model_json_schema() if cookies else None
+        )
         return {
         "name": selected_api,
         "model_card":selected_markdown,
-        "schema": {
-            "body": body.model_json_schema() if body else None,
-            "params": params.model_json_schema() if params else None,
-            "query": query.model_json_schema() if query else None,
-            "variables":variables.model_json_schema() if variables else None,
-            "headers":headers.model_json_schema() if headers else None,
-            "cookies":cookies.model_json_schema() if cookies else None
-            },
+        "schema": schema
         }
 
+subAgent = SubAgent()
+graph = subAgent.graph
+async def run(chunk: Text) -> State:
+    state = {
+        "request": chunk.user_input,
+        "stream_id  ": chunk.stream_id,
+        "user_name": chunk.username,
+        "session_id": chunk.session_id
+    }
+    return await graph.invoke(state)
