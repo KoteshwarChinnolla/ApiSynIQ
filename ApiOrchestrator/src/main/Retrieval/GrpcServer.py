@@ -7,19 +7,22 @@ from .data_pb2 import IncomingAudio, AudioChunk, RawAudio
 import grpc
 from Generation.SubAgent import SubAgent
 
-class GrpcServer:
-  def __init__(self):
-     self.serve()
+agent = SubAgent()
 
-  def serve(self):
-      server = grpc.server(thread_pool=ThreadPoolExecutor(max_workers=10))
+class GrpcServer:
+#   def __init__(self):
+#      self.serve()
+
+  async def serve(self):
+    #   server = grpc.server(thread_pool=ThreadPoolExecutor(max_workers=10))
+      server = grpc.aio.server() 
       grpc_services.add_TTSServiceServicer_to_server(
           TTSServiceServicer(), server
       )
       server.add_insecure_port("[::]:7324")
-      server.start()
+      await server.start()
       print("Server started on port 7324")
-      server.wait_for_termination()
+      await server.wait_for_termination()
 
 
 class TTSServiceServicer(grpc_services.TTSServiceServicer):
@@ -42,13 +45,13 @@ class TTSServiceServicer(grpc_services.TTSServiceServicer):
             print(f"[INFO] Session {session_id} not found")
         return
 
-    def UploadAudio(self, request_iterator, context):
+    async def UploadAudio(self, request_iterator, context):
         print("[INFO] Started Receiving...")
 
         current_session_id = None
         stt_session = None
 
-        for chunk in request_iterator:
+        async for chunk in request_iterator:
             packet_type = chunk.WhichOneof("packet")
 
             if packet_type == "audio_in":
@@ -66,7 +69,7 @@ class TTSServiceServicer(grpc_services.TTSServiceServicer):
                 )
                 stt_session.loadAudio(audioChunk)
             elif packet_type=="text":
-                SubAgent.run(chunk.text)
+                await agent.run(chunk.text)
 
             elif packet_type == "error":
                 print(f"[{current_session_id}] -> {chunk.error.error}")

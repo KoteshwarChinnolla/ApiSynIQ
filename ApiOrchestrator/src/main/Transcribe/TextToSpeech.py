@@ -96,7 +96,7 @@ class SpeakTranscribe:
                     channels=1
                 )
 
-                self.audioStream.push_chunk(send_to_grpc)
+                self.audioStream.push_audio_chunk(send_to_grpc)
 
             self.audioStream.flush()
             self.text_queue.task_done()

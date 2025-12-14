@@ -35,6 +35,20 @@ function logMessage(text) {
     $("log").appendChild(div);
 }
 
+let currentLine = null;
+
+function printText(text) {
+    if (!text) return;
+
+    if (!currentLine) {
+        currentLine = document.createElement("div");
+        currentLine.className = "log-line";
+        document.getElementById("printText").appendChild(currentLine);
+    }
+
+    currentLine.textContent += text;
+}
+
 function getFields() {
     return {
         username: $("username").value.trim(),
@@ -85,7 +99,6 @@ function createWebSocket(fields) {
 // ------------------------------------------------------------------
 async function handleIncomingAudio(evt) {
     let msg;
-
     try {
         msg = JSON.parse(evt.data);
     } catch (e) {
@@ -94,7 +107,7 @@ async function handleIncomingAudio(evt) {
     }
 
     if (msg.text) {
-        logMessage("Respoe :" + msg.text);
+        printText(msg.text);
     }
 
     if (!msg.audio_bytes || !msg.sample_rate || !msg.channels || msg.audio_bytes.length === 0) {
@@ -303,6 +316,13 @@ label { display:block;margin-top:10px; }
     overflow:auto;
     border:1px solid #ccc;
 }
+.log-line {
+    color: #000;
+    font-size: 14px;
+    white-space: pre-wrap; /* preserves spaces correctly */
+}
+
+
 </style>
 </head>
 
@@ -336,8 +356,8 @@ label { display:block;margin-top:10px; }
 <br>
 <button id="sendMessageBtn">Send</button>
 <button id="micBtn">🎤 Start Mic</button>
+<div id="printText" class="log-container"></div>
 <h3>Logs</h3>
 <div id="log"></div>
-
 </body>
 </html>

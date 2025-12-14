@@ -1,7 +1,7 @@
 from concurrent.futures import ThreadPoolExecutor
 import grpc
 from . import data_pb2_grpc as grpc_services
-from .data_pb2 import query, InputsAndReturnsMatch, repeatedInput, AudioChunk, Empty, StreamPacket
+from .data_pb2 import query, InputsAndReturnsMatch, repeatedInput, AudioChunk, Empty, StreamPacket, Text
 
 
 
@@ -25,8 +25,16 @@ class AudioStream:
         stub = grpc_services.TTSServiceStub(channel)
         self.stub = stub
         self._queue = [] 
+        print("[GRPC] Audio Stream Connected to go gateway")
+      
+    def push_text_chunk(self, text:AudioChunk):
+      pocket = StreamPacket(audio_out=text)
+      #  self._queue.append(pocket)
+      print(pocket)
+      self.stub.UploadAudio(pocket)
+      print("[GRPC] Text sent")
 
-    def push_chunk(self, audio_chunk):
+    def push_audio_chunk(self, audio_chunk):
         pocket = StreamPacket(audio_out=audio_chunk)
         self._queue.append(pocket)
 

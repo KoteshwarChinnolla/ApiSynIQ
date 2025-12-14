@@ -37,8 +37,7 @@ async def speak(text: str, runtime: ToolRuntime) -> Dict:
     print(send_to_json)
     return {"tool_output": send_to_json.__dict__}
 
-@tool
-async def query_api(results: Dict, runtime: ToolRuntime) -> Dict:
+async def query_api(results: Dict) -> Dict:
   """Takes in the Parmeters and returns the response from the API.
   
   Args:

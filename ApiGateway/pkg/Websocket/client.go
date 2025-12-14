@@ -152,9 +152,9 @@ func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	client.mode = "CHAT"
 	client.hub.register <- client
 
-	stream.Send(&proto.StreamPacket{Packet: &proto.StreamPacket_AudioIn{
-		AudioIn: &incoming,
-	}})
+	// stream.Send(&proto.StreamPacket{Packet: &proto.StreamPacket_AudioIn{
+	// 	AudioIn: &incoming,
+	// }})
 	print("connected " + name)
 
 	go client.writePump()

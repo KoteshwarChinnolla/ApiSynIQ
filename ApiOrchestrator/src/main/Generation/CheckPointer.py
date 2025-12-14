@@ -24,10 +24,10 @@ def delete_checkpoint(checkpoint_id: str):
 
 def update_checkpoint(runtime, checkpoint_id: str):
     if checkpoint_id in CHECKPOINT_STORE:
+        print("☑️ Updating checkpoint...")
         CHECKPOINT_STORE[checkpoint_id]["state"] = dict(runtime)
     else:
+      print("✅ Creating checkpoint...")
       CHECKPOINT_STORE[checkpoint_id] = {
-          "state": dict(runtime),
-          "graph_pointer": getattr(runtime, "graph_pointer", None),
-          "agent_memory": getattr(runtime, "memory_snapshot", None),
+          "state": dict(runtime)
       }

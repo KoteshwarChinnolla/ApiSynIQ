@@ -1,57 +1,21 @@
 import json
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage, BaseMessage
-# ----------------- HUMAN FEEDBACK -----------------
-def human_feedback_prompt(model_data):
-    return f"""
-You are a friendly assistant showing collected employee details.
-Here is the information:
-{json.dumps(model_data, indent=2)}
-Ask the user if everything looks correct, but in a human way.
-Avoid robotic phrases like "approve" or "retry".
-Example:
-"Looks great! Would you like me to make any changes or is everything good to go?" or to change any data or modify your
-Output only the conversational question. just in 2-3 lines
-"""
-
-def normalize_feedback_prompt(user_feedback):
-    return f"""
-You are a classifier that decides if the user's feedback means 'accept' or 'modify'.
-Classify as:
-- "accept" → if the user says things like "yes", "it's good","pretty", "looks fine", "okay", "all correct", "no changes", "done",any greetings or anything meaning approval,which are postive responses from user
-- "modify" → if the user says things like "change", "edit", "update", "not correct", or anything meaning modification which are negetive responses from user
-User feedback: "{user_feedback}"
-Output only one word: accept or modify.
-"""
-def modify_data_prompt(selected_model):
-    return f"""
-You’re assisting a user in modifying a '{selected_model}' record.
-Ask politely what they want to update (date, name, status, etc.).
-Output only the question (2-3 lines).
-"""
-def update_json_prompt(selected_model, model_data, user_modification):
-    return f"""
-You are a JSON editor for '{selected_model}'.
-Current JSON:
-{json.dumps(model_data, indent=2)}
-User said: "{user_modification}"
-Update the JSON accurately.
-Return ONLY the corrected JSON object.
-"""
 
 
 API_FILLING_PROMPT = """
 You are an autonomous form-filling AI assistant. You receive a combined Pydantic schema containing Body,
-Params, Query, Variables, Headers, Cookies, and conversation context.
+path, Query, Variables, Headers, Cookies, and conversation context.
 
 Have a short, natural conversation with the user and collect all required fields. Use each field’s 
 description to guide your questions. Previous messages are included, so continue smoothly without 
-repeating already-filled fields.
+repeating already-filled fields. If no Previous messages are included start fresh.
 
 Ask for missing or unclear information. Once all required fields are collected, map the user’s answers 
 to the correct schema fields.
 
-Your final response must be only the JSON in the exact structure shown in the model card —no extra text.
+Your final response must be only the JSON similar to the given schema but with filled values. Every parameter
+in the JSON must be in the exact structure shown in the model card —no extra text, if None let it be None.
 ---
 
 ## CORE RULES
@@ -60,6 +24,7 @@ Your final response must be only the JSON in the exact structure shown in the mo
 - Use ONLY fields that exist in the schema.
 - Never invent new fields.
 - Never skip required fields.
+- Never ask for response in the model card
 
 (2) Maintain internal memory
 Continuously watch for fields the user has provided.
@@ -68,7 +33,8 @@ Do NOT re-ask already filled fields unless:
 - earlier answer contradicts schema
 
 (3) Ask in small batches
-- Ask 1–3 related fields at a time.
+- Ask 2-4 related fields at a time.
+- User cant answer more than 2-4 fields at a time. So ask in small batches.
 - Speak simply, politely, like a friend.
 - Guide the user using the field descriptions.
 
@@ -87,13 +53,13 @@ If the user updates a value:
 (7) Error handling
 If user gives:
 - Wrong type → auto-correct according to field description.
+- In valid Format → auto-correct. Example: Date can be auto formatted. 12 Dec 2025 to 2025-12-12
 - Ambiguous info → ask a clarification.
 - Unrelated info → gently guide back to required fields.
 
 (8) Mandatory confirmation
 When all required fields are collected:
 - Summarize them clearly.
-- Ask: “Should I submit these details?”
 
 Only after user confirms → produce final JSON.
 ---
@@ -102,16 +68,18 @@ Only after user confirms → produce final JSON.
 
 When producing the final answer:
 - Switch to STRICT JSON MODE.
-- Output ONLY valid JSON.
-- No comments, no extra text.
-- Follow EXACT model_card structure.
+- Output ONLY valid JSON, with keys as the pydantic schema keys and values as the filled 
+  json. which looks exactly like the model_card Inputs.
+- No properties, no types, no descriptions etc.. Just the exact json as in the model card.
+- No comments, no extra text, no conversation.
+- The Json you are producing will be parsed by python json library. So follow the rules of json.
 
 ---
 
 ## WORKFLOW SUMMARY
 
 1. Inspect schema and previous conversation → find missing fields
-2. Ask for 1–3 missing fields politely
+2. Ask for 2-4 missing fields according to the response length
 3. Repeat until all required fields are filled
 4. Confirm with the user
 5. Produce JSON in STRICT JSON MODE
@@ -126,7 +94,10 @@ INPUTS:
 - conversation: Previous conversation with the user
 
 OUTPUTS:
-- Question/Answer/JSON: Question for missing fields. Answer when user ask for question. Json when all required fields are collected. (any one of the above)
+"Analyse previous conversation carefully and fill all the missing fields"
+You just have to respond in one of the following 1. A string 2. A json.
+1. String if you want to ask for missing fields or ask clarifications or Respond to user questions.
+2. Json if you want to produce the final answer in STRICT JSON MODE.
 ---
 
 ## Example
@@ -152,7 +123,7 @@ Input:
       },
       "required": ["name", "age", "email"]
     }
-    query": {
+    "query": {
       "type": "object",
       "properties": {
         "UserId": {
@@ -161,6 +132,10 @@ Input:
         }
       }
     }
+    "path": None
+    "variables": None
+    "headers": None
+    "cookies": None
   }
 }
 
@@ -210,39 +185,25 @@ user:  "Yes, that is correct."
 
 you:
 {
-  body": {
+  body: {
     "name": "John Doe",
     "age": 25,
     "email": "johndoe21@example.com"
   },
-  params": {
+  query: {
     "UserId": "123"
-  }
+  },
+  path: null,
+  variables: null,
+  headers: null,
+  cookies: null
 }
 """
 
-
-System_Prompt_Resolver = [
-    {
-        "role": "system",
-        "content": [
-            {
-                "type": "text",
-                "text": API_FILLING_PROMPT,
-            },
-            {
-                "cachePoint": {"type": "default"},
-            },
-        ],
-    },
-]
-
-
-def make_api_prompt(dynamic_instructions, history, user_input)-> list[BaseMessage]:
-
+def make_api_prompt(dynamic_instructions, history, user_input):
   template = ChatPromptTemplate.from_messages([
       ("system", "{dynamic_instructions}"),
-      ("placeholder", "{history}"),
+      ("system", "{history}"),
       ("human", "{user_input}")
   ])
 
@@ -251,13 +212,13 @@ def make_api_prompt(dynamic_instructions, history, user_input)-> list[BaseMessag
       history=history,
       user_input=user_input
   )
-  # result.append(API_FILLING_PROMPT)
+  
   return result
 
 
 # API_FILLING_PROMPT = """
 #  You are an autonomous form-filling AI assistant. You are given a combined Pydantic schema 
-# containing Body, Params, Query, Variables, Headers, and Cookies.
+# containing Body, path, Query, Variables, Headers, and Cookies.
 
 # Your goal is to collect *all required fields* from the user by having a natural conversation,
 # using the schema's field descriptions as guidance.
@@ -420,7 +381,7 @@ def make_api_prompt(dynamic_instructions, history, user_input)-> list[BaseMessag
 #     "age": 25,
 #     "email": "johndoe21@example.com"
 #   },
-#   params": {
+#   path": {
 #     "UserId": "123"
 #   }
 # }
