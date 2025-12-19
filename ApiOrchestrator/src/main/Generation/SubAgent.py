@@ -14,8 +14,8 @@ from langchain.tools import tool, ToolRuntime
 from dataclasses import dataclass
 from Processing.StringToPydantic import GeneratePydantic
 from .prompts import API_FILLING_PROMPT, make_api_prompt
-from Retrieval.FetchApi import AudioStream
-from .Tools import speak, query_api
+from Retrieval.FetchApi import stream
+from .Tools import query
 from .CheckPointer import checkpoint_exists, load_checkpoint, save_checkpoint, update_checkpoint
 from Retrieval.data_pb2 import Text,AudioChunk
 from Retrieval import data_pb2 as grpc_data
@@ -36,7 +36,6 @@ aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
 aws_region = os.getenv("AWS_REGION")
 model = os.getenv("MODEL")
 
-stream = AudioStream()
 
 class Schema(BaseModel):
     """Each of variables contains the pydantic model for the patheter required by the API."""
@@ -107,13 +106,14 @@ class SubAgent:
 
         self.agent = create_agent(
             model=self.llm_model,
-            middleware=[saveContext]
-            # response_format=Response,
+            middleware=[saveContext],
+            tools=[query]
         )
 
         self.sample_agent = create_agent(
             model=self.sample_model,
             system_prompt=SystemMessage(content=API_FILLING_PROMPT),
+            tools=[query]
         )
 
 
@@ -154,7 +154,7 @@ class SubAgent:
         Model Card: {result["model_card"]}
         """
         messages = make_api_prompt(SystemMessage, state["history"], state["request"])
-        llm_output = None
+        llm_output = ""
 
         async for event in self.agent.astream({"messages": messages}, stream_mode="messages"):
             try:
@@ -170,8 +170,10 @@ class SubAgent:
                     stream_id=stream_id,
                     language="en-US",
                 )
+                
 
                 stream.push_audio_chunk(grpc_send)
+                llm_output += text
                 print(grpc_send)
 
             except Exception as e:
@@ -186,33 +188,31 @@ class SubAgent:
 
         stream.flush()
 
-        response = self.decode_llm_output(llm_output)
-        try:
-            response = json.loads(response)
-        except:
-            pass
-
         new_history = state["history"]
         new_history.append(("human", user_input))
-        new_history.append(("ai", response))
+        new_history.append(("ai", llm_output))
 
-        state["response"] = response
+        state["response"] = llm_output
         state["markdown"] = result["model_card"]
         state["history"] = new_history
-        state["pending_prompt"] = response
+        state["pending_prompt"] = llm_output
 
-        if type(response) == dict:
-            print("dict", response)
+        if type(llm_output) == dict:
+            print("dict", llm_output)
             state["pending_prompt"] = None
             query = RequestApi()
-            query_response = query.query(inp=response, method=state["method"], url=state["url"])
+            query_response = query.query(inp=llm_output, method=state["method"], url=state["url"])
             state["query_response"] = query_response
         
         update_checkpoint(state, stream_id)
         return state
 
     def decode_llm_output(self, event) -> str | None:
-        print(event)
+        # print(event)
+        if "model" in event:
+            event = event["model"]
+        if "messages" in event:
+            event = event["messages"]
         if isinstance(event, tuple):
             event = event[0]
 

@@ -103,6 +103,7 @@ class RequestApi:
             except json.JSONDecodeError:
                 return value
         return value
+    
     def query(self,
         inp: dict,
         method: str,
@@ -117,7 +118,6 @@ class RequestApi:
         if not isinstance(inp, dict):
             raise ValueError("`inp` must be a dict describing the request inputs.")
 
-        # Parse inputs safely
         path_obj = self._parse_maybe_json(inp.get("path"))
         query_obj = self._parse_maybe_json(inp.get("query")) or {}
         headers_obj = self._parse_maybe_json(inp.get("headers")) or {}
@@ -196,6 +196,7 @@ class RequestApi:
             "final_url": resp.url,
         }
         return result    
+    
     def execute_output_request_dict( inp: dict, method: str, url: str) -> dict:
 
         if type(inp) != dict:

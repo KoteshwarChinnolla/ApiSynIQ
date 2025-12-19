@@ -2,47 +2,40 @@
 from typing import Any, Dict
 from langchain.tools import tool, ToolRuntime
 from langchain_core.messages import AIMessage, HumanMessage
+
+from Querying.RestApi import RequestApi
 from .CheckPointer import update_checkpoint 
 from Retrieval.data_pb2 import Text,AudioChunk
 from Retrieval.FetchApi import AudioStream
+from Retrieval.FetchApi import stream
 
-
-
-@tool
-async def speak(text: str, runtime: ToolRuntime) -> Dict:
-    """Converts text to speech and streams it as audio chunks.
+@tool(description="Use the query tool when the required parameters are filled. Make sure to pass the inputs correctly. the tool actually queries the API with the parameters.")
+async def query(inputs: Dict, runtime: ToolRuntime) -> str:
+    """Takes in the input Parameters and returns the response from the API.
+    
     Args:
-        text (str): The text to be converted to speech.
+        inputs(Dict) : Final json in STRICT JSON MODE.
     Returns:
-        Dict: A dictionary containing the user response.
+        Dict: The response from the API.
     """
-    runtime.state["pending_prompt"] = text
-    checkpoint_id = runtime.state["stream_id"]
-    runtime.state["history"].append(AIMessage(content=text))
+    print("Tool call received: ", inputs)
+    state = runtime.state
+    state["pending_prompt"] = None
+    query = RequestApi()
+    query_response = query.query(inp=inputs, method=state["method"], url=state["url"])
+    state["query_response"] = query_response
+    text = str(query_response)
+    
+    if not text:
+        return state
 
-    await update_checkpoint(runtime, checkpoint_id)
-
-    send_to_json = AudioChunk(
-        audio_bytes=None,
+    grpc_send = AudioChunk(
         text=text,
-        username=runtime.state["user_name"],
-        session_id=runtime.state["session_id"],
-        stream_id=runtime.state["checkpoint_id"],
+        username=state["user_name"],
+        session_id=state["session_id"],
+        stream_id=state["stream_id"],
         language="en-US",
-        audio_option="",
-        options={}
     )
-
-    # AudioStream.push_chunk(send_to_json)
-    print(send_to_json)
-    return {"tool_output": send_to_json.__dict__}
-
-async def query_api(results: Dict) -> Dict:
-  """Takes in the Parmeters and returns the response from the API.
-  
-  Args:
-      results (Dict): The parameters to be passed to the API.
-  Returns:
-      Dict: The response from the API.
-  """
-  return {"output": results}
+    
+    stream.push_audio_chunk(grpc_send)
+    return state

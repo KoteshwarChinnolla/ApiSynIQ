@@ -45,3 +45,5 @@ class AudioStream:
                 yield self._queue.pop(0)
 
         self.stub.UploadAudio(gen())
+
+stream = AudioStream()

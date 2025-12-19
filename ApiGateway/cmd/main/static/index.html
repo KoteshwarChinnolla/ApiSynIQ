@@ -107,7 +107,7 @@ async function handleIncomingAudio(evt) {
     }
 
     if (msg.text) {
-        printText(msg.text);
+        printText("<br><h3>AI</h3> "+ msg.text);
     }
 
     if (!msg.audio_bytes || !msg.sample_rate || !msg.channels || msg.audio_bytes.length === 0) {
@@ -284,6 +284,7 @@ async function onMicToggle() {
 
 async function onSendText() {
     const fields = getFields();
+    currentLine = null;
     const sendText = {
         text: fields.message,
         username: fields.username || "Sample_user",
@@ -292,6 +293,7 @@ async function onSendText() {
         language: fields.language || "en-US",
         options: fields.optionsText ? JSON.parse(fields.optionsText) : {}
     }
+    printText("<br><h3>YOU</h3> :"+ fields.message)
     if (conn) {
         conn.send(JSON.stringify(sendText));
     }
