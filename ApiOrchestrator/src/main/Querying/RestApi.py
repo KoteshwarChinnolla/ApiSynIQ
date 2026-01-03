@@ -115,6 +115,8 @@ class RequestApi:
         """
         Build and execute an HTTP request from a structured 'inp' dict.
         """
+
+        print("inp received", inp)
         if not isinstance(inp, dict):
             raise ValueError("`inp` must be a dict describing the request inputs.")
 
@@ -133,8 +135,11 @@ class RequestApi:
         if isinstance(query_obj, dict) and query_obj:
             final_url = f"{final_url}?{urlencode(query_obj)}"
 
+
         if not isinstance(headers_obj, dict):
             raise ValueError("`headers` must be a dict or JSON-encoded dict.")
+        
+
         if not isinstance(cookies_obj, dict):
             raise ValueError("`cookies` must be a dict or JSON-encoded dict.")
 
@@ -148,7 +153,7 @@ class RequestApi:
             else:
                 data_payload = body_obj
 
-
+        print("final_url", final_url)
         with requests.Session() as session:
             try:
                 resp = session.request(

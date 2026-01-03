@@ -205,38 +205,47 @@ class GeneratePydantic:
 
         if description:
             lines.append(f'    """{description.strip()}"""')
-
         for f in fields:
             fname = f.name
             dtype_raw = f.dataType or "string"
             description = f.description or ""
-            default_value = f.defaultValue or "null"
+            default_value = f.defaultValue
             options = f.options or ""
+            example = f.example
+            can_skip = bool(f.autoExecute)
 
-            # Type mapping
             py_type = PY_TYPE_MAP.get(dtype_raw, "str")
 
             if options:
                 opts = [o.strip() for o in options.split(",")]
-                literal_values = ", ".join([f'"{o}"' for o in opts])
-                py_type = f"Literal[{literal_values}]"
-
-            # Default
-            if default_value not in ("", None, "null"):
-                try:
-                    default_parsed = json.loads(default_value)
-                except:
-                    default_parsed = default_value
-                default_code = repr(default_parsed)
-            else:
-                default_code = "None"
-                py_type = f"Optional[{py_type}]"
+                py_type = f"Literal[{', '.join(repr(o) for o in opts)}]"
 
             field_params = []
             if description:
-                field_params.append(f'description="{description}"')
+                field_params.append(f'description={repr(description)}')
+            if example is not None:
+                field_params.append(f'examples=[{repr(example)}]')
 
-            field_code = f"Field({default_code}, {', '.join(field_params)})"
+            if can_skip:
+                # User may skip → Optional
+                py_type = f"Optional[{py_type}]"
+
+                if default_value not in ("", None, "null"):
+                    try:
+                        default_code = repr(json.loads(default_value))
+                    except:
+                        default_code = repr(default_value)
+                else:
+                    default_code = "None"
+            else:
+                default_code = "..."
+
+            field_code = (
+                f"Field({default_code}"
+                f"{', ' if field_params else ''}"
+                f"{', '.join(field_params)})"
+            )
+
             lines.append(f"    {fname}: {py_type} = {field_code}")
 
         class_code = "\n".join(imports) + "\n\n" + "\n".join(lines)

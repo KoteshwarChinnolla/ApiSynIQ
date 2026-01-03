@@ -2,7 +2,7 @@
 import asyncio
 from fastapi import FastAPI
 from pydantic import BaseModel
-from .SubAgent import State, SubAgent, Context
+from .SubAgent import SubAgent
 from Retrieval.data_pb2 import Text
 import uvicorn
 from Retrieval.data_pb2 import query
@@ -30,23 +30,14 @@ class Input(BaseModel):
 
 subAgent = SubAgent()
 
-async def run(chunk: Text) -> State:
-    state = {
-        "request": chunk.text,
-        "history": [],
-        "stream_id": chunk.stream_id,
-        "user_name": chunk.username,
-        "session_id": chunk.session_id,
-        "context": Context(context_data={})
-    }
-    return await subAgent.graph.ainvoke(state)
-
 @app.post("/run")
 async def run_agent(chunk: Input):
     chunk_grpc = chunk.toGrpc()
-    result = await run(chunk=chunk_grpc)
+    result = await subAgent.run(chunk=chunk_grpc)
     return result
 
+async def run_sub_agent(chunk: Text, state: dict):
+    await subAgent.run(chunk=chunk, state=state)
 
 def inspect_model(model):
     print("\n=== CLASS INFO ===")
@@ -91,13 +82,3 @@ query = query(query="get calender details", limit=2)
 if __name__ == "__main__":
     # uvicorn.run(app, host="0.0.0.0", port=3000)
     asyncio.run(GrpcServer().serve())
-    
-    
-    
-#     let say i have a stateless service that actually takes in the input and stream the output to a front end page so it is a long running task keeping this in picture, i would like to make it concurent or paralel what ever you say, when ever multiple request come from the frontend api this 2 requests must not stay in the waiting stage so it must exicute stream paralley or cocurently. if i have to discribe the use case there is a model wich is hosted in the cloud (aws) there is a application that requesting the api for every single request, this model might take time to process(but it is not a cpu intensive) it is actually a waiting relates as the model is hosted in the cloud.so every request hits this if it waits then no point of application each user needs to wait a lot of time.
-
-# so what solution fits here
-# id it multi threading can we actually send each user to a suppurate thread ??
-# or multiprocessing can we actually process each user in a suppurate core (i think this is in efficient)
-# or asynchronous programming can we actually pass it and dont wait for the output
-# which solution fits here

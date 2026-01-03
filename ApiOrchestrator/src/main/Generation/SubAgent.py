@@ -1,7 +1,9 @@
+import copy
 import os
 from typing import Union
 import uuid
 from dotenv import load_dotenv
+from requests_toolbelt import user_agent
 from typing_extensions import TypedDict,List,Dict,Any,Type 
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import InMemorySaver
@@ -13,7 +15,7 @@ from Querying.RestApi import RequestApi
 from langchain.tools import tool, ToolRuntime 
 from dataclasses import dataclass
 from Processing.StringToPydantic import GeneratePydantic
-from .prompts import API_FILLING_PROMPT, make_api_prompt
+from .prompts import API_FILLING_PROMPT
 from Retrieval.FetchApi import stream
 from .Tools import query
 from .CheckPointer import checkpoint_exists, load_checkpoint, save_checkpoint, update_checkpoint
@@ -23,9 +25,9 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, AIMessageChunk
 from langchain_groq import ChatGroq
 from langchain_aws import ChatBedrockConverse
-from langchain.agents.middleware import before_model, after_model, AgentState
+from langchain.agents.middleware import before_model, after_agent, after_model, AgentState
 from langgraph.runtime import Runtime
-
+from .Data import AgentType, decode_llm_output
 
 load_dotenv()
 # GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -46,33 +48,28 @@ class Schema(BaseModel):
     headers: Any = None
     cookies: Any = None
 
-@dataclass
-class Context:
-  context_data:Dict
-
-class Response(BaseModel):
-    text: str = Field(default=None, description="Question/Answer : Question for missing fields. Answer when user ask for question.")
-    api_inputs: str = Field(default=None, description="Json when all required fields are collected in STRICT JSON MODE.")
-
-class State(TypedDict):
-    request: str = ""
-    response: str = ""
-    markdown: str = ""
-    history: List[Dict[str, str]] = []
-    pending_prompt: str = ""
-    stream_id: str = ""
-    user_name: str = ""
+# @dataclass
+class configDetails(BaseModel):
+    user_name: str= ""
     session_id: str = ""
-    context: Context = Context(context_data={})
+    stream_id: str = ""
+
+
+class StateObject(AgentState):
+    messages: List[Dict[str, str]] = []
+    markdown: str = "" 
+    schema: Dict = None
     method: str = ""
     url: str = ""
-    query_response: str = ""
+    api_response: str = ""
 
-@after_model
-def saveContext(state: State, runtime: Runtime) -> dict[str, Any] | None:
-    # update_checkpoint(runtime, runtime.state["stream_id"])
-    print(f"After model worked")
-    return None
+
+
+@after_agent
+def saveContext(state: AgentState, runtime: Runtime) -> None:
+    # print(runtime.context, type(runtime.context))
+    stream_id = runtime.context.stream_id
+    update_checkpoint(state, stream_id, AgentType.SUB_AGENT)
 
 class SubAgent:
     def __init__(self):
@@ -82,13 +79,15 @@ class SubAgent:
         #     google_api_key=GEMINI_API_KEY
         # )
         self.sample_model = ChatGroq(
-            model="llama-3.1-8b-instant"
+            model="llama-3.3-70b-versatile"
         )
+
         self.llm_model = ChatBedrockConverse(
             # model="us.anthropic.claude-3-5-haiku-20241022-v1:0",
             # model_id=model,
             # provider="anthropic",
-            model="openai.gpt-oss-20b-1:0",
+            # model="openai.gpt-oss-20b-1:0",
+            model="qwen.qwen3-32b-v1:0",
             aws_access_key_id=aws_access_key_id,
             aws_secret_access_key=aws_secret_access_key,
             region_name=aws_region,
@@ -102,171 +101,110 @@ class SubAgent:
             ]
         )
         
-        self.graph = self._build_graph()
-
         self.agent = create_agent(
             model=self.llm_model,
-            middleware=[saveContext],
+            # middleware=[saveContext],
+            state_schema=StateObject,
+            context_schema=configDetails,
             tools=[query]
         )
 
         self.sample_agent = create_agent(
             model=self.sample_model,
+            state_schema=StateObject,
+            context_schema=configDetails,
             system_prompt=SystemMessage(content=API_FILLING_PROMPT),
             tools=[query]
         )
-
-
-    def _build_graph(self) -> StateGraph:
-        builder = StateGraph(State)
-        builder.add_node("agent", self.Agent)
-        builder.add_edge(START, "agent")
-        builder.add_edge("agent", END)
-        return builder.compile()
     
-    async def Agent(self, state: State):
-        user_input = state["request"]
-        stream_id = state["stream_id"]
+    async def run_agent(self, message:str, config: configDetails, state: StateObject | None = None) -> None:
 
-        if stream_id and checkpoint_exists(stream_id):
+        if state is None:
+            state = copy.deepcopy(StateObject(messages=[], markdown="", schema=None, method="GET", url=None))
+
+        stream_id = config.stream_id
+        
+        if stream_id and checkpoint_exists(stream_id, AgentType.SUB_AGENT):
+
             print("✅ Checkpoint exists")
+
             saved = load_checkpoint(stream_id)
             if not saved:
                 raise RuntimeError("No checkpoint found")
-            state = saved["state"]
-            state["request"] = user_input
-            state.pop("pending_prompt", None)
+            state = copy.deepcopy(saved["state"][AgentType.SUB_AGENT])
+        
 
-        if state["context"] and state["context"].context_data.get("schema") is None:
+        if state["markdown"] == "" or state["schema"] is None:
             print("✅ Hit")
-            result = self.model_selector(state["request"])
+            result = self.model_selector(message)
+            state["markdown"] = result["model_card"]
+            state["schema"] = result["schema"]
             state["method"] = result["method"]
             state["url"] = result["url"]
-            state["context"].context_data.update(result)
-        else:
-            print("❌ Not Hit")
-            result = state["context"].context_data
+            SystemMessage = f"""
+                Here are the schema and model card for the API to be filled:
+                Schema: {result["schema"]}
+                Model Card: {result["model_card"]}
+            """
+            state["messages"].append({
+                "role": "system",
+                "content": SystemMessage
+            })
 
+        
+        state["messages"].append({
+            "role": "user",
+            "content": message
+        })
 
-        SystemMessage = f"""
-        Here are the schema and model card for the API to be filled:
-        Schema: {result["schema"]}
-        Model Card: {result["model_card"]}
-        """
-        messages = make_api_prompt(SystemMessage, state["history"], state["request"])
         llm_output = ""
 
-        async for event in self.agent.astream({"messages": messages}, stream_mode="messages"):
-            try:
-                text = self.decode_llm_output(event)
+        try:
+            async for event in self.sample_agent.astream(input=state, context=config, stream_mode="messages"):
+                try:
+                    text = decode_llm_output(event)
 
-                if not text:
-                    continue
+                    if not text:
+                        continue
 
-                grpc_send = AudioChunk(
-                    text=text,
-                    username=state["user_name"],
-                    session_id=state["session_id"],
-                    stream_id=stream_id,
-                    language="en-US",
-                )
-                
+                    grpc_send = AudioChunk(
+                        text=text,
+                        username=config.user_name,
+                        session_id=config.session_id,
+                        stream_id=config.stream_id,
+                        language="en-US",
+                        options={"content": "text", "role": "subagent", "status": "pending"}
+                    )
 
-                stream.push_audio_chunk(grpc_send)
-                llm_output += text
-                print(grpc_send)
+                    stream.push_audio_chunk(grpc_send)
+                    llm_output += text
+                    print(grpc_send)
 
-            except Exception as e:
-                print("Decode error:", e)
-                print("Event:", event)
+                except Exception as e:
+                    print("Decode error:", e)
+                    print("Event:", event)
 
-        # llm_output = await self.agent.ainvoke({"messages": messages})
-
-        # response = self.decode_llm_output(llm_output)
-        # grpc_send = AudioChunk(text=response, username=state["user_name"], session_id=state["session_id"], stream_id=stream_id, language="en-US")
-        # stream.push_audio_chunk(grpc_send)
-
+        except Exception as e:
+            print("Error:", e)
         stream.flush()
 
-        new_history = state["history"]
-        new_history.append(("human", user_input))
-        new_history.append(("ai", llm_output))
+        state["messages"].append({
+            "role": "assistant",
+            "content": llm_output
+        })
 
-        state["response"] = llm_output
-        state["markdown"] = result["model_card"]
-        state["history"] = new_history
-        state["pending_prompt"] = llm_output
+        if stream_id:
+            update_checkpoint(state, stream_id, AgentType.SUB_AGENT)
 
-        if type(llm_output) == dict:
-            print("dict", llm_output)
-            state["pending_prompt"] = None
-            query = RequestApi()
-            query_response = query.query(inp=llm_output, method=state["method"], url=state["url"])
-            state["query_response"] = query_response
-        
-        update_checkpoint(state, stream_id)
         return state
-
-    def decode_llm_output(self, event) -> str | None:
-        # print(event)
-        if "model" in event:
-            event = event["model"]
-        if "messages" in event:
-            event = event["messages"]
-        if isinstance(event, tuple):
-            event = event[0]
-
-        # No stream, Direct invoke
-        if isinstance(event, AIMessage):
-            content = event.content
-
-            if isinstance(content, str) and content.strip():
-                return content
-
-            if isinstance(content, list):
-                texts = []
-                for block in content:
-                    if block.get("type") == "text":
-                        txt = block.get("text", "")
-                        if txt.strip():
-                            texts.append(txt)
-                return "".join(texts) if texts else None
-
-            return None
-
-        # Stream mode
-        if isinstance(event, AIMessageChunk):
-            content = event.content
-
-            if not content:
-                return None
-
-            # Groq case
-            if isinstance(content, str) and content.strip():
-                return content
-
-            # Bedrocks case
-            if isinstance(content, list):
-                texts = []
-                for block in content:
-                    block_type = block.get("type")
-
-                    if block_type == "text":
-                        txt = block.get("text", "")
-                        if txt.strip():
-                            texts.append(txt)
-
-                return "".join(texts) if texts else None
-            return None
-        return None
-            
+    
     def model_selector(self,user_input: str):
 
         gen=GeneratePydantic()
 
         user_input = user_input
         a = grpc_data.query(query=user_input, limit=3)
-        fetched_results=gen.Fetch(a,"RETURN")
+        fetched_results=gen.Fetch(a,"INPUT")
 
         if not fetched_results:
             return {"selected_model": None}
@@ -336,13 +274,10 @@ class SubAgent:
             "schema": schema
         }
     
-    async def run(self,chunk: Text) -> State:
-        state = {
-            "request": chunk.text,
-            "history": [],
-            "stream_id": chunk.stream_id,
-            "user_name": chunk.username,
-            "session_id": chunk.session_id,
-            "context": Context(context_data={})
-        }
-        return await self.graph.ainvoke(state)
+
+    async def run(self, chunk: Text, state: StateObject | None = None):
+        config = configDetails(user_name=chunk.username, session_id=chunk.session_id, stream_id=chunk.stream_id)
+        print("[VERIFICATION] received config", config)
+        return await self.run_agent(message=chunk.text, config=config, state=state)
+    
+    
