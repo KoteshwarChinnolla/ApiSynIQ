@@ -5,9 +5,7 @@ from Transcribe.STT.Factory import STTController
 from . import data_pb2_grpc as grpc_services
 from .data_pb2 import IncomingAudio, AudioChunk, RawAudio
 import grpc
-from Generation.SubAgent import SubAgent
-
-agent = SubAgent()
+from Generation.RunAgents import run_agent
 
 class GrpcServer:
 #   def __init__(self):
@@ -68,8 +66,9 @@ class TTSServiceServicer(grpc_services.TTSServiceServicer):
                     audio_option=audio.audio_option
                 )
                 stt_session.loadAudio(audioChunk)
+                
             elif packet_type=="text":
-                await agent.run(chunk.text)
+                await run_agent(chunk.text)
 
             elif packet_type == "error":
                 print(f"[{current_session_id}] -> {chunk.error.error}")
@@ -82,3 +81,5 @@ class TTSServiceServicer(grpc_services.TTSServiceServicer):
                 final_text = stt_session.feed(chunk)
 
                 # print(f"[{current_session_id}] -> {final_text}")
+
+                

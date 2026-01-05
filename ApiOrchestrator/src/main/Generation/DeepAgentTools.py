@@ -2,21 +2,16 @@
 from typing import Annotated, Any, Dict, Literal
 from langchain.tools import tool, ToolRuntime
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from Querying.RestApi import RequestApi
 from .CheckPointer import update_checkpoint 
 from .prompts import QUERY_TOOL_PROMPT, GET_API_TOOL_DESCRIPTION, READ_FILE_TOOL_DESCRIPTION, WRITE_FILE_PROMPT, EDIT_FILE_TOOL_DESCRIPTION, API_RESOLVER_TOOL_DESCRIPTION
 from Retrieval.data_pb2 import Text,AudioChunk
 from Retrieval.data_pb2 import query as q
-from Retrieval.FetchApi import AudioStream
 from Processing.StringToPydantic import GeneratePydantic
 from deepagents.middleware.filesystem import TOOL_GENERATORS
-from Retrieval.FetchApi import stream
 from langgraph.types import Command
-from .SubAgent import StateObject, SubAgent
 from langchain.tools import InjectedToolCallId
-from .testSubAgent import run_sub_agent
 from langchain_core.tools import BaseTool, StructuredTool
 from deepagents.backends.protocol import (
     BackendProtocol,
@@ -24,9 +19,7 @@ from deepagents.backends.protocol import (
     SandboxBackendProtocol,
     WriteResult,
 )
-
-queries = RequestApi()
-
+from .Utils import run_sub_agent
 
 class Schema(BaseModel):
     body: Any = None
@@ -37,61 +30,22 @@ class Schema(BaseModel):
     cookies: Any = None
 
 
-@tool(description=QUERY_TOOL_PROMPT)
-def query(inputs: Dict, runtime: ToolRuntime) -> str:
-    """Takes in the input Parameters and returns the response from the API.
-    
-    Args:
-        inputs(Dict) : Final json in that is verified and matches the pydantic schema.
-    Returns:
-        str: The response from the API.
-    """
-    if not inputs:
-        raise ValueError("It is not possible to call the API with empty inputs.")
+# {"search_query": "string", "type": "string", "count": 1},
 
-    
-    print("Tool call received: ", inputs) 
-    state = runtime.state
-    query_response = queries.query(inp=inputs, method=state["method"], url=state["url"])
-    state["query_response"] = query_response
-    print("Result of API call: ", query_response)
-    text = str(query_response)
-    
-    if not text:
-        return ""
-    config = runtime.context
+class GetApisInput(BaseModel):
+    search_query: str = Field(..., description="Semantic description of the API intent")
+    type: str = Field(..., description="INPUT or RETURN")
+    count: int = Field(..., ge=1, description="Number of APIs to retrieve")
 
-    grpc_send = AudioChunk(
-        text=text,
-        username=config.user_name,
-        session_id=config.session_id,
-        stream_id=config.stream_id,
-        language="en-US",
-        options={
-            "content": "text",
-            "role": "query_tool",
-            "status": "success",
-        }
-    )
-    
-    stream.push_audio_chunk(grpc_send)
-    stream.flush()
-    return text
+class ApiResolverInput(BaseModel):
+    task: str = Field(..., description="Task to perform using the selected API")
+    selected_api: str = Field(..., description="API name selected from get_apis")
 
+def get_apis(search_query:str, type: str, count: int, runtime: ToolRuntime, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
 
-@tool(description=GET_API_TOOL_DESCRIPTION)
-def get_apis(search_query:str, type:Literal["INPUT", "RETURN"], count: int, runtime: ToolRuntime, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
-    """
-    Retrieves relevant API specifications via vector search.
+    if type not in ["INPUT", "RETURN"]:
+        raise ValueError("type must be either 'INPUT' or 'RETURN'")
 
-    Args:
-        search_query (str): A concise semantic description of the API intent.
-        type (Literal["INPUT", "RETURN"]): Whether the API is used to send or retrieve data.
-        count (int): Maximum number of APIs to return.
-
-    Returns:
-        Dict: A dictionary containing API definitions.
-    """
     gen=GeneratePydantic()
 
     a = q(query=search_query, limit=count)
@@ -151,16 +105,17 @@ def get_apis_tool_generator(
 ) -> BaseTool:
     
     tool_description = custom_tool_descriptions or GET_API_TOOL_DESCRIPTION
-    def sync_get_apis(search_query: str, type: Literal["INPUT", "RETURN"], count: int, runtime: ToolRuntime) -> Dict:
-        return get_apis(search_query, type, count, runtime)
+    def sync_get_apis(search_query: str, type: str, count: int, runtime: ToolRuntime, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+        return get_apis(search_query, type, count, runtime, tool_call_id)
 
-    async def async_get_apis(search_query: str, type: Literal["INPUT", "RETURN"], count: int, runtime: ToolRuntime) -> Dict:
-        return get_apis(search_query, type, count, runtime)
+    async def async_get_apis(search_query: str, type: str, count: int, runtime: ToolRuntime, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+        return get_apis(search_query, type, count, runtime, tool_call_id)
 
 
     return StructuredTool(
         name="get_apis",
         description=tool_description,
+        args_schema=GetApisInput,
         func=sync_get_apis,
         coroutine=async_get_apis,
     )
@@ -191,6 +146,7 @@ def get_todo_filesystem_tools(
 
     return tools
 
+
 custom_tool_descriptions = {
     "read_file": READ_FILE_TOOL_DESCRIPTION,
     "write_file": WRITE_FILE_PROMPT,
@@ -220,7 +176,8 @@ async def api_resolver(task, selected_api, runtime):
         stream_id=config.stream_id,
         language="en-US",
     )
-    return await run_sub_agent(chunk=text, state=api_resolver_state_dict)
+
+    return run_sub_agent(text, api_resolver_state_dict)
 
 def _create_api_resolver(tool_description: str | None = None):
 
@@ -236,6 +193,7 @@ def _create_api_resolver(tool_description: str | None = None):
     return StructuredTool(
         name="api_resolver",
         description=tool_description,
+        args_schema=ApiResolverInput,
         func=api_resolver_sync,
         coroutine=async_api_resolver,
     )
@@ -248,5 +206,5 @@ DEEPAGENT_TOOLS = get_todo_filesystem_tools(
 
 DEEPAGENT_TOOLS.extend([
     get_apis_tool_generator(custom_tool_descriptions=GET_API_TOOL_DESCRIPTION),
-    _create_api_resolver(custom_tool_descriptions=API_RESOLVER_TOOL_DESCRIPTION)
+    _create_api_resolver(tool_description=API_RESOLVER_TOOL_DESCRIPTION)
 ])

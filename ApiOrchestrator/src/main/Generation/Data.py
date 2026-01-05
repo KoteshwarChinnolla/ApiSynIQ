@@ -6,7 +6,7 @@ class AgentType(Enum):
     DEEP_AGENT = 1
     SUB_AGENT = 2
 
-def decode_llm_output(self, event) -> str | None:
+def decode_llm_output(event) -> str | None:
     if "model" in event:
         event = event["model"]
     if "messages" in event:
@@ -58,4 +58,6 @@ def decode_llm_output(self, event) -> str | None:
             return "".join(texts) if texts else None
         return None
     return None
-        
+
+
+

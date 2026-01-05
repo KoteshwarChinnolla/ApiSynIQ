@@ -1,27 +1,19 @@
 import copy
 import os
-from typing import Union
-import uuid
 from dotenv import load_dotenv
-from requests_toolbelt import user_agent
 from typing_extensions import TypedDict,List,Dict,Any,Type 
-from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import InMemorySaver
 import json, re
 # from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 from langchain.agents import create_agent 
-from Querying.RestApi import RequestApi
-from langchain.tools import tool, ToolRuntime 
-from dataclasses import dataclass
 from Processing.StringToPydantic import GeneratePydantic
 from .prompts import API_FILLING_PROMPT
 from Retrieval.FetchApi import stream
-from .Tools import query
+from .SubAgentTools import query
 from .CheckPointer import checkpoint_exists, load_checkpoint, save_checkpoint, update_checkpoint
 from Retrieval.data_pb2 import Text,AudioChunk
 from Retrieval import data_pb2 as grpc_data
-from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, AIMessageChunk
 from langchain_groq import ChatGroq
 from langchain_aws import ChatBedrockConverse
@@ -69,7 +61,7 @@ class StateObject(AgentState):
 def saveContext(state: AgentState, runtime: Runtime) -> None:
     # print(runtime.context, type(runtime.context))
     stream_id = runtime.context.stream_id
-    update_checkpoint(state, stream_id, AgentType.SUB_AGENT)
+    update_checkpoint(state, stream_id, AgentType.SUB_AGENT.name)
 
 class SubAgent:
     def __init__(self):
@@ -173,7 +165,7 @@ class SubAgent:
                         session_id=config.session_id,
                         stream_id=config.stream_id,
                         language="en-US",
-                        options={"content": "text", "role": "subagent", "status": "pending"}
+                        options={"content": "text", "role": AgentType.DEEP_AGENT, "status": "pending"}
                     )
 
                     stream.push_audio_chunk(grpc_send)
@@ -194,7 +186,7 @@ class SubAgent:
         })
 
         if stream_id:
-            update_checkpoint(state, stream_id, AgentType.SUB_AGENT)
+            update_checkpoint(state, stream_id, AgentType.SUB_AGENT.name)
 
         return state
     
@@ -277,7 +269,7 @@ class SubAgent:
 
     async def run(self, chunk: Text, state: StateObject | None = None):
         config = configDetails(user_name=chunk.username, session_id=chunk.session_id, stream_id=chunk.stream_id)
-        print("[VERIFICATION] received config", config)
+        print("[VERIFICATION SUB AGENT] received config", config)
         return await self.run_agent(message=chunk.text, config=config, state=state)
     
     

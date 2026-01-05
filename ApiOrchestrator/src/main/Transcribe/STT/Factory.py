@@ -9,7 +9,7 @@ from vosk import Model
 
 
 whisperModel = None
-voskModel=None
+voskModel = None
 
 class InitTextModelsWhisper:
     def __init__(self):

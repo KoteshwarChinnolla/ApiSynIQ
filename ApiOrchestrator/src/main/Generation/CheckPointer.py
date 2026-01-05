@@ -19,6 +19,7 @@ def load_checkpoint(checkpoint_id: str) -> Dict:
     return CHECKPOINT_STORE.get(checkpoint_id)
 
 def checkpoint_exists(checkpoint_id: str) -> bool:
+    print("[CHECKPOINT] Checking if checkpoint exists...")
     return checkpoint_id in CHECKPOINT_STORE
 
 def delete_checkpoint(checkpoint_id: str):
@@ -28,11 +29,13 @@ def delete_checkpoint(checkpoint_id: str):
 def update_checkpoint(state, checkpoint_id: str, agent_id = None):
     if checkpoint_id in CHECKPOINT_STORE:
         print("☑️ Updating checkpoint...")
-        CHECKPOINT_STORE[checkpoint_id]["state"][str(agent_id)] = copy.deepcopy(state)
+        CHECKPOINT_STORE[checkpoint_id]["state"][agent_id] = copy.deepcopy(state)
     else:
       print("✅ Creating checkpoint...")
       CHECKPOINT_STORE[checkpoint_id] = {
           "state": {
-              str(agent_id): copy.deepcopy(state)
+              agent_id: copy.deepcopy(state)
           }
       }
+
+      

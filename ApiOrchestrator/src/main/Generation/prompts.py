@@ -124,7 +124,18 @@ Strict rules before calling the query tool:
 4. You must put the final json as the tool input. Do not leave inputs empty.
 """
 
-GET_API_TOOL_DESCRIPTION = """Purpose:
+GET_API_TOOL_DESCRIPTION = """
+Retrieves relevant API specifications via vector search.
+
+Args:
+    search_query (str): A concise semantic description of the API intent.
+    type (str): Whether the API is used to send("INPUT") or retrieve data("RETURN").
+    count (int): Maximum number of APIs to return.
+
+Returns:
+    A Dict containing API definitions.
+
+Purpose:
 This tool retrieves relevant API definitions using semantic (vector) search.
 Use it ONLY when solving the task requires interacting with or selecting a concrete API.
 
@@ -171,6 +182,8 @@ Writes to a new file in the filesystem.
 Usage:
 - The file_path parameter must be an absolute path, not a relative path
   always in the format of /todos/<session_id>.txt
+
+- session_id will be provided in the config.
 
 - The content parameter must be a string in following format:
   
@@ -244,7 +257,7 @@ Input:
 
 Resources:
 - get_apis tool(Used if and only if the user request needs an API call)
-- api_resolver subagent tool(Used to fill the parameters required for API and return the response from the API)
+- api_resolver subagent tool(It fills the parameters and makes a API call. You just have to pass API from get_apis tool response keys.)
 - write_file tool( Used to write the ToDo list to a file. use the provided session_id as the file name.only used once per session.)
 - read_file tool( Used to read the ToDo list from a file. )
 - edit_file tool( Used to edit the ToDo list in a file. example: to edit task status, add new tasks, etc.. use session_id as the file name. )
@@ -297,9 +310,10 @@ Rules
 
 API_RESOLVER_TOOL_DESCRIPTION = """Purpose:
 This tool acts as a **sub-agent** whose ONLY responsibility is to:
-1. Collect or infer the required input parameters for a chosen API
-2. Call that API
-3. Return the API response
+1. Pass the API name as parameter.
+2. Collect all the parameters from the user.
+3. Call that API
+4. Return the API response
 
 Parameters:
 - selected_api:
@@ -321,13 +335,7 @@ Usage Rules:
   - No API execution is strictly necessary
 
 Execution Rules:
-- The API name MUST come from the get_apis tool output
-- If required parameters are missing:
-  - Interact with the user to obtain them
-  - Do NOT assume or fabricate values
-- Once all parameters are available:
-  - Execute the API
-  - Return the raw API response
+- The API name MUST come from the get_apis tool output, Key of the selected API definition.
 
 After Execution:
 - Use the API response to complete the user’s request

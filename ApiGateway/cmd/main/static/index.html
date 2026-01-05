@@ -46,7 +46,7 @@ function printText(text) {
         document.getElementById("printText").appendChild(currentLine);
     }
 
-    currentLine.textContent += text;
+    currentLine.innerHTML += DOMPurify.sanitize(text);
 }
 
 function getFields() {
@@ -82,7 +82,7 @@ function createWebSocket(fields) {
             stream_id: fields.streamId || "stream_001",
             session_id: fields.sessionId || "session_001",
             audio_option: fields.audio_option || "kathleen",
-            options: fields.optionsText ? JSON.parse(fields.optionsText) : {}
+            options: fields.optionsText ? JSON.parse(fields.optionsText) : {"role":"DEEP_AGENT", "content":"text"}
         }));
         logMessage("Connected");
     };
@@ -106,8 +106,12 @@ async function handleIncomingAudio(evt) {
         return;
     }
 
+    document.getElementById('options').value = JSON.stringify(msg.options);
+
+
     if (msg.text) {
-        printText("<br><h3>AI</h3> "+ msg.text);
+        if (currentLine == null) printText("<br><h3>AI :</h3> ");
+        printText(msg.text);
     }
 
     if (!msg.audio_bytes || !msg.sample_rate || !msg.channels || msg.audio_bytes.length === 0) {
@@ -284,16 +288,17 @@ async function onMicToggle() {
 
 async function onSendText() {
     const fields = getFields();
-    currentLine = null;
+    
     const sendText = {
         text: fields.message,
         username: fields.username || "Sample_user",
         session_id: fields.sessionId || "session_001",
         stream_id: fields.streamId || "stream_001",
         language: fields.language || "en-US",
-        options: fields.optionsText ? JSON.parse(fields.optionsText) : {}
+        options: fields.optionsText ? JSON.parse(fields.optionsText) : {"role":"DEEP_AGENT", "content":"text"}
     }
-    printText("<br><h3>YOU</h3> :"+ fields.message)
+    printText("<br><h3>YOU : </h3>"+ fields.message)
+    currentLine = null;
     if (conn) {
         conn.send(JSON.stringify(sendText));
     }
@@ -307,7 +312,7 @@ window.onload = function () {
 };
 
 </script>
-
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
 <style>
 body { font-family: Arial; }
 label { display:block;margin-top:10px; }
@@ -348,7 +353,7 @@ label { display:block;margin-top:10px; }
 <input type="text" id="audio_option" placeholder="kathleen" value="kathleen">
 
 <label>Options (JSON):</label>
-<textarea id="options" rows="2" placeholder='{"key": "value"}'></textarea>
+<textarea id="options" rows="2" placeholder='{"role":"DEEP_AGENT", "content":"text"}' value='{"role":"DEEP_AGENT", "content":"text"}'></textarea>
 
 <br><br>
 
