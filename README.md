@@ -43,6 +43,9 @@ If the AI wants to have access to the Catalogue of API's and their requirements,
 1. Input Query: If this is passed, it means that you would need an API that takes in the input(mainly user for POST, PUT, PATCH endpoints)
 2. Output Query: If this is passed, then you are expecting some output from the API (Used in GET, DELETE endpoints)
 
+### **API RESOLVER**
+API Resolver is written in Java. The reason behind this is that it has a great ecosystem for handling databases. It is specifically for RAG in this application.
+
 
 
    
