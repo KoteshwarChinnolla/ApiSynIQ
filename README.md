@@ -9,3 +9,4 @@ Integrate ApiSynIQ into your application to turn complex workflows like booking 
 
 ![Descriptive alt text for the image](Architecture/ProductionGrade.jpeg)
 
+### **Here is the breakdown of the flow of a user request**
