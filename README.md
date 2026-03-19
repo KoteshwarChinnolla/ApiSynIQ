@@ -4,3 +4,6 @@
 It understands user intent, fills the required JSON bodies, query parameters, and headers automatically, calls the right API endpoints, and interprets the responses—making API interactions fast, simple, and conversational.
 
 Integrate ApiSynIQ into your application to turn complex workflows like booking tickets, updating user data, or searching products into effortless voice or chat commands.
+
+![Descriptive alt text for the image](Architecture/ProductionGrade.jpeg)
+
