@@ -9,4 +9,13 @@ Integrate ApiSynIQ into your application to turn complex workflows like booking 
 
 ![Descriptive alt text for the image](Architecture/ProductionGrade.jpeg)
 
-### **Here is the breakdown of the flow of a user request**
+### Here is the breakdown of **how a user request flows?**
+
+**GO Gateway**
+Whenever a user queries the application's frontend, the request reaches the GO gateway. GO Gateway handles all the load and distributes it to the AI workload. Here, the GO language is used specifically to handle concurrent requests. Go handles all the HTTP-based and WebSocket-based requests seamlessly. 
+
+This application uses
+**net/http** for HTTP request, as it consists of all the required features.
+**gorilla** for WebSocket-based requests, which allows us to maintain flowless streaming of AI tokens.
+
+
