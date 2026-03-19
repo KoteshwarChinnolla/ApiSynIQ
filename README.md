@@ -15,6 +15,7 @@
 
 <br/>
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 ![Go](https://img.shields.io/badge/Go-Gateway-00ADD8?style=for-the-badge&logo=go&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-Orchestrator-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Java](https://img.shields.io/badge/Java-API_Resolver-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
@@ -53,7 +54,7 @@ Just say *"Book me a ticket to Mumbai for tomorrow"* or type *"Update my shippin
 
 ![ApiSynIQ Production Architecture](Architecture/ProductionGrade.jpeg)
 
-A user query travels through three purpose-built layers, each chosen for what it does best.
+A user query travels through four purpose-built layers, each chosen for what it does best.
 
 <br/>
 
@@ -111,6 +112,27 @@ This service is the RAG engine of ApiSynIQ. It stores every API's input and outp
 
 <br/>
 
+### 4 · Java Agent SDK — *The Connector*
+
+The Java Agent is an annotation-based SDK that lets you describe your API endpoints, DTOs, and parameters in plain language — right inside your existing Java code. No separate config files, no external schema management. Just annotate, and ApiSynIQ knows everything it needs to route, fill, and call your APIs intelligently.
+
+> Currently available for Java. Support for more languages is on the roadmap.
+
+**Annotations at a glance:**
+
+| Annotation | Placed On | Purpose | Parameters |
+|---|---|---|---|
+| `@AIExposeController` | Controller class | Gives ApiSynIQ a complete picture of all endpoints in the class — what they collectively do and why they exist | `name`, `description` |
+| `@AIExposeDto` | DTO / request body class | Describes a Data Transfer Object so the AI knows what it's filling — whether it's a request body, input param, or nested object | `name`, `description`, `example` |
+| `@AIExposeEpHttp` | Individual endpoint method | The richest annotation — fully describes an endpoint: what it does, how to call it, when to use it, and what it returns. Powers the semantic search in the API Resolver | `name`, `tags`, `example`, `pathParameters`, `requestParameters`, `headers`, `variables`, `autoExecute`, `inputDescription`, `returnDescription` |
+| `@Describe` | Any variable or parameter | A versatile, fine-grained annotation for documenting individual fields — DTO variables, query params, path params, and more | `name`, `description`, `dataType`, `defaultValue`, `options`, `autoExecute`, `example` |
+
+**Why annotations?**
+
+Keeping descriptions co-located with code means they stay in sync as your APIs evolve. No drift between docs and reality. When a field changes, the annotation changes with it — and ApiSynIQ's understanding updates automatically.
+
+<br/>
+
 ---
 
 ## Request Flow — End to End
@@ -145,6 +167,7 @@ Users (voice / text)
 | Gateway | Go | `net/http`, `gorilla/websocket` |
 | AI Orchestrator | Python | LangChain, LangGraph, Pydantic, gRPC |
 | API Resolver | Java | Spring, pgvector, gRPC |
+| Java Agent SDK | Java | Custom annotations |
 | Vector Store | PostgreSQL | pgvector extension |
 | Transport | gRPC | Protobuf |
 
