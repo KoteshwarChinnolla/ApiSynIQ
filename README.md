@@ -24,7 +24,7 @@ This application uses
 
 Thereafter, the request reaches the **AI Orchestrator**
 
-#### **AI Orchestrator**
+### **AI Orchestrator**
 
 This is written in Python because its widespread ecosystem is in the field of AI. This Python application is configured to manage all the core logic, 
 
