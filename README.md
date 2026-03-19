@@ -44,7 +44,15 @@ If the AI wants to have access to the Catalogue of API's and their requirements,
 2. Output Query: If this is passed, then you are expecting some output from the API (Used in GET, DELETE endpoints)
 
 ### **API RESOLVER**
-API Resolver is written in Java. The reason behind this is that it has a great ecosystem for handling databases. It is specifically for RAG in this application.
+
+API Resolver is written in Java. The reason behind this is that it has a great ecosystem for handling databases. From the AI point of view, the API resolver is for RAG-based search in Postgres, by taking in the query and giving out the most relevant API according to the semantic search through all the Input descriptions and Output descriptions.
+
+Apart from AI, it has a wide range of use cases, such as
+1. maintaining the relation between parameters and descriptions
+2. Storing information logically for every kind of JSON that the API expects.
+3. Handling all the CRUD operations for the SDK.
+4. As the SDK is attached to the UI, Updates will be made through the API Resolver.
+
 
 
 
