@@ -22,7 +22,7 @@ This application uses
 **gorilla** for WebSocket-based requests, which allows us to maintain flowless streaming of AI tokens.
 
 
-Thereafter, the request reaches the **AI Orchestrator**
+Thereafter, the request reaches the **AI Orchestrator**.
 
 ### **AI Orchestrator**
 
@@ -37,5 +37,13 @@ such as
 6. Defining Tools, and associating them with Deep Agents and Subagents
 7. Transcribing voice to text and test to voice
 8. Pydantic conversions from JSON for better API definition.
+
+If the AI wants to have access to the Catalogue of API's and their requirements, it has to reach the **API Resolver** with a query. The query determines what kind of API is required for processing the user request. There are two types of queries
+
+1. Input Query: If this is passed, it means that you would need an API that takes in the input(mainly user for POST, PUT, PATCH endpoints)
+2. Output Query: If this is passed, then you are expecting some output from the API (Used in GET, DELETE endpoints)
+
+
+
    
 
