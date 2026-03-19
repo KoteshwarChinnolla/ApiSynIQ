@@ -196,7 +196,7 @@ ApiSynIQ is open source and contributions are very welcome. Whether it's a bug f
 
 ## License
 
-[MIT](LICENSE) — free to use, modify, and distribute.
+[apache-2.0](LICENSE) — free to use, modify, and distribute.
 
 <br/>
 
