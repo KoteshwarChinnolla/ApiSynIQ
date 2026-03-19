@@ -18,6 +18,22 @@ Whenever a user queries the application's frontend, the request reaches the GO g
 This application uses
 
 **net/http** for HTTP request, as it consists of all the required features.
+
 **gorilla** for WebSocket-based requests, which allows us to maintain flowless streaming of AI tokens.
 
+
+Thereafter, the request reaches the **AI Orchestrator**
+
+This is written in Python because its widespread ecosystem is in the field of AI. This Python application is configured to manage all the core logic, 
+
+such as
+1. Routing the user request to AI
+2. Making AI think about the best possible API
+3. Providing the context to the AI model
+4. Persisting the user requests and responses by communicating with the database.
+5. Core Langchain and Langgraph logics
+6. Defining Tools, and associating them with Deep Agents and Subagents
+7. Transcribing voice to text and test to voice
+8. Pydantic conversions from JSON for better API definition.
+   
 
