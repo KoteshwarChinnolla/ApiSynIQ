@@ -7,6 +7,8 @@ from Retrieval.FetchApi import stream
 from Retrieval.data_pb2 import Text,AudioChunk
 from Querying.RestApi import RequestApi
 from .prompts import QUERY_TOOL_PROMPT
+from langgraph.types import Command
+
 
 queries = RequestApi()
 
@@ -48,7 +50,12 @@ def query(inputs: Dict, runtime: ToolRuntime) -> str:
         }
     )
     
-    stream.push_audio_chunk(grpc_send)
-    stream.flush()
-    return text
+    # stream.push_audio_chunk(grpc_send)
+    # stream.flush()
+    return Command(
+        update={
+            "api_response": query_response,
+            "messages": [ToolMessage(content=text, tool_call_id=runtime.tool_call_id)],
+        },
+    )
 

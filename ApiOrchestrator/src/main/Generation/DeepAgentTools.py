@@ -1,5 +1,5 @@
 
-from typing import Annotated, Any, Dict, Literal
+from typing import Annotated, Any, Dict, List, Literal
 from langchain.tools import tool, ToolRuntime
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from pydantic import BaseModel, Field
@@ -20,6 +20,7 @@ from deepagents.backends.protocol import (
     WriteResult,
 )
 from .Utils import run_sub_agent
+from .Data import Plan
 
 class Schema(BaseModel):
     body: Any = None
@@ -30,7 +31,6 @@ class Schema(BaseModel):
     cookies: Any = None
 
 
-# {"search_query": "string", "type": "string", "count": 1},
 
 class GetApisInput(BaseModel):
     search_query: str = Field(..., description="Semantic description of the API intent")
@@ -41,7 +41,11 @@ class ApiResolverInput(BaseModel):
     task: str = Field(..., description="Task to perform using the selected API")
     selected_api: str = Field(..., description="API name selected from get_apis")
 
-def get_apis(search_query:str, type: str, count: int, runtime: ToolRuntime, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+class FileInput(BaseModel):
+    path: str = Field(..., description="Path to the file, must be an absolute path in the format of /todos/<session_id>.csv")
+    content: str = Field(..., description="Content of the file, must be comma-separated in following format: API_NAME, EXECUTION_REASON, EXECUTION_STATUS, API_RESPONSE")
+
+def get_apis(search_query:str, type: str, count: int, runtime: ToolRuntime, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command[Literal["orchestrator"]]:
 
     if type not in ["INPUT", "RETURN"]:
         raise ValueError("type must be either 'INPUT' or 'RETURN'")
@@ -61,7 +65,9 @@ def get_apis(search_query:str, type: str, count: int, runtime: ToolRuntime, tool
             "messages": [
                 ToolMessage(f"{markdowns} Here are the API's for search query: {search_query} of type: {type}", tool_call_id=tool_call_id)
             ],
-        }
+            
+        },
+        goto="orchestrator",
     )
 
 def schema_formation(fetched_results):
@@ -122,10 +128,81 @@ def get_apis_tool_generator(
 
 
 SELECTED_TOOL_NAMES = {
-    "read_file",
+    # "read_file",
     "write_file",
     "edit_file",
 }
+
+
+def write_plan(
+        file_path: str,
+        content: str,
+        runtime: ToolRuntime,):
+    state=runtime.state
+    with open(file_path, "w") as f:
+        f.write(content)
+        
+    return Command(
+        update={
+            "plan": content,
+            "messages": [
+                ToolMessage(f"Plan saved to {file_path}", tool_call_id=runtime.tool_call_id)
+            ],
+        }
+    )
+
+async def edit_plan(
+        file_path: str,
+        content: str,
+        runtime: ToolRuntime,):
+    with open(file_path, "w") as f:
+        f.write(content)
+    return Command(
+        update={
+            "plan": content,
+            "messages": [
+                ToolMessage(f"Plan saved to {file_path}", tool_call_id=runtime.tool_call_id)
+            ],
+        }
+    )
+
+def _get_write_plan_tools(
+    custom_tool_descriptions: dict[str, str] | None = None,
+):
+    tool_description = custom_tool_descriptions["write_file"] or WRITE_FILE_PROMPT
+
+    def sync_write_plan(file_path: str, content: str, runtime: ToolRuntime, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+        return write_plan(file_path, content, runtime)
+
+    async def async_write_plan(file_path: str, content: str, runtime: ToolRuntime, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+        return await write_plan(file_path, content, runtime)
+
+    return StructuredTool(
+        name="write_plan",
+        description=tool_description,
+        args_schema=FileInput,
+        func=sync_write_plan,
+        coroutine=async_write_plan,
+    )
+
+def _get_edit_plan_tools(
+    custom_tool_descriptions: dict[str, str] | None = None,
+):
+    tool_description = custom_tool_descriptions["edit_file"] or EDIT_FILE_TOOL_DESCRIPTION
+
+    def sync_edit_plan(file_path: str, content: str, runtime: ToolRuntime, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+        return edit_plan(file_path, content, runtime)
+
+    async def async_edit_plan(file_path: str, content: str, runtime: ToolRuntime, tool_call_id: Annotated[str, InjectedToolCallId]) -> Command:
+        return await edit_plan(file_path, content, runtime)
+
+    return StructuredTool(
+        name="edit_plan",
+        description=tool_description,
+        args_schema=FileInput,
+        func=sync_edit_plan,
+        coroutine=async_edit_plan,
+    )
 
 
 def get_todo_filesystem_tools(
@@ -153,9 +230,7 @@ custom_tool_descriptions = {
     "edit_file": EDIT_FILE_TOOL_DESCRIPTION,
 }
 
-async def api_resolver(task, selected_api, runtime):
-    config = runtime.context
-    state = runtime.state
+async def api_resolver(task, selected_api, state, config):
     if "apis" not in state or selected_api not in state["apis"]:
         raise ValueError(f"API '{selected_api}' not found. Call get_apis first.")
     inputs_to_process = state["apis"][selected_api]
@@ -184,11 +259,15 @@ def _create_api_resolver(tool_description: str | None = None):
     tool_description = tool_description or API_RESOLVER_TOOL_DESCRIPTION
 
     def api_resolver_sync(task: str, selected_api: str, runtime: ToolRuntime):
-        return api_resolver(task, selected_api, runtime)
+        state = runtime.state
+        config = runtime.context  
+        return api_resolver(task, selected_api, state, config)
          
     
     async def async_api_resolver(task: str, selected_api: str, runtime: ToolRuntime):
-        return await api_resolver(task, selected_api, runtime)    
+        state = runtime.state
+        config = runtime.context 
+        return await api_resolver(task, selected_api, state, config)    
     
     return StructuredTool(
         name="api_resolver",
@@ -204,7 +283,14 @@ DEEPAGENT_TOOLS = get_todo_filesystem_tools(
     custom_tool_descriptions=custom_tool_descriptions
 )
 
-DEEPAGENT_TOOLS.extend([
-    get_apis_tool_generator(custom_tool_descriptions=GET_API_TOOL_DESCRIPTION),
-    _create_api_resolver(tool_description=API_RESOLVER_TOOL_DESCRIPTION)
-])
+FILE_SYSTEM_TOOLS = [
+    _get_write_plan_tools(custom_tool_descriptions=custom_tool_descriptions),
+    _get_edit_plan_tools(custom_tool_descriptions=custom_tool_descriptions),
+]
+
+# DEEPAGENT_TOOLS.extend([
+#     get_apis_tool_generator(custom_tool_descriptions=GET_API_TOOL_DESCRIPTION),
+#     _create_api_resolver(tool_description=API_RESOLVER_TOOL_DESCRIPTION)
+# ])
+
+GET_API_TOOL = [get_apis_tool_generator(custom_tool_descriptions=GET_API_TOOL_DESCRIPTION)]

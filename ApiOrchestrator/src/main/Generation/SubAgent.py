@@ -1,10 +1,14 @@
 import copy
+from operator import add
 import os
+from typing import Annotated, Literal
 from dotenv import load_dotenv
 from typing_extensions import TypedDict,List,Dict,Any,Type 
+from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import InMemorySaver
 import json, re
-# from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.prebuilt import tools_condition
+from langgraph.prebuilt.tool_node import ToolNode
 from pydantic import BaseModel, Field
 from langchain.agents import create_agent 
 from Processing.StringToPydantic import GeneratePydantic
@@ -14,12 +18,14 @@ from .SubAgentTools import query
 from .CheckPointer import checkpoint_exists, load_checkpoint, save_checkpoint, update_checkpoint
 from Retrieval.data_pb2 import Text,AudioChunk
 from Retrieval import data_pb2 as grpc_data
-from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, AIMessageChunk
+from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, AIMessageChunk, AnyMessage
 from langchain_groq import ChatGroq
 from langchain_aws import ChatBedrockConverse
 from langchain.agents.middleware import before_model, after_agent, after_model, AgentState
 from langgraph.runtime import Runtime
-from .Data import AgentType, decode_llm_output
+from .Data import AgentType, decode_llm_output, stream_decode
+from langgraph.graph import StateGraph, START, END
+from langchain_core.runnables.config import RunnableConfig
 
 load_dotenv()
 # GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
@@ -40,28 +46,17 @@ class Schema(BaseModel):
     headers: Any = None
     cookies: Any = None
 
-# @dataclass
 class configDetails(BaseModel):
     user_name: str= ""
     session_id: str = ""
     stream_id: str = ""
 
-
 class StateObject(AgentState):
-    messages: List[Dict[str, str]] = []
-    markdown: str = "" 
+    markdown: str = ""
     schema: Dict = None
-    method: str = ""
+    method: str = "GET"
     url: str = ""
     api_response: str = ""
-
-
-
-@after_agent
-def saveContext(state: AgentState, runtime: Runtime) -> None:
-    # print(runtime.context, type(runtime.context))
-    stream_id = runtime.context.stream_id
-    update_checkpoint(state, stream_id, AgentType.SUB_AGENT.name)
 
 class SubAgent:
     def __init__(self):
@@ -71,7 +66,7 @@ class SubAgent:
         #     google_api_key=GEMINI_API_KEY
         # )
         self.sample_model = ChatGroq(
-            model="llama-3.3-70b-versatile"
+            model="llama-3.3-70b-versatile",
         )
 
         self.llm_model = ChatBedrockConverse(
@@ -92,104 +87,44 @@ class SubAgent:
                 # }
             ]
         )
-        
-        self.agent = create_agent(
-            model=self.llm_model,
-            # middleware=[saveContext],
-            state_schema=StateObject,
-            context_schema=configDetails,
-            tools=[query]
+
+
+        self.llm_with_tools = self.llm_model.bind_tools([query])
+
+        self.checkpoint = InMemorySaver()
+        self.agent = (
+            StateGraph(state_schema=StateObject, context_schema=configDetails)
+            .add_node("run_agent", self.core)
+            .add_node("tools", ToolNode([query]))
+            .add_edge(START, "run_agent")
+            .add_conditional_edges("run_agent", tools_condition, {
+                "tools": "tools",
+                "__end__": END
+            })
+            .add_edge("tools", END)
+            .compile(checkpointer=self.checkpoint)
         )
 
-        self.sample_agent = create_agent(
-            model=self.sample_model,
-            state_schema=StateObject,
-            context_schema=configDetails,
-            system_prompt=SystemMessage(content=API_FILLING_PROMPT),
-            tools=[query]
-        )
-    
-    async def run_agent(self, message:str, config: configDetails, state: StateObject | None = None) -> None:
-
-        if state is None:
-            state = copy.deepcopy(StateObject(messages=[], markdown="", schema=None, method="GET", url=None))
-
-        stream_id = config.stream_id
-        
-        if stream_id and checkpoint_exists(stream_id, AgentType.SUB_AGENT):
-
-            print("✅ Checkpoint exists")
-
-            saved = load_checkpoint(stream_id)
-            if not saved:
-                raise RuntimeError("No checkpoint found")
-            state = copy.deepcopy(saved["state"][AgentType.SUB_AGENT])
-        
-
-        if state["markdown"] == "" or state["schema"] is None:
+    def core(self,state: StateObject, config: RunnableConfig ):
+        if "markdown" not in state:
             print("✅ Hit")
-            result = self.model_selector(message)
-            state["markdown"] = result["model_card"]
+            result = self.model_selector(state["messages"][-1].content)
+            state["markdown"] = result["model_card"] 
             state["schema"] = result["schema"]
             state["method"] = result["method"]
             state["url"] = result["url"]
-            SystemMessage = f"""
+            systemMessage = f"""
                 Here are the schema and model card for the API to be filled:
                 Schema: {result["schema"]}
                 Model Card: {result["model_card"]}
             """
-            state["messages"].append({
-                "role": "system",
-                "content": SystemMessage
-            })
+            state["messages"].append(SystemMessage(content=systemMessage))
 
-        
-        state["messages"].append({
-            "role": "user",
-            "content": message
-        })
-
-        llm_output = ""
-
-        try:
-            async for event in self.sample_agent.astream(input=state, context=config, stream_mode="messages"):
-                try:
-                    text = decode_llm_output(event)
-
-                    if not text:
-                        continue
-
-                    grpc_send = AudioChunk(
-                        text=text,
-                        username=config.user_name,
-                        session_id=config.session_id,
-                        stream_id=config.stream_id,
-                        language="en-US",
-                        options={"content": "text", "role": AgentType.DEEP_AGENT, "status": "pending"}
-                    )
-
-                    stream.push_audio_chunk(grpc_send)
-                    llm_output += text
-                    print(grpc_send)
-
-                except Exception as e:
-                    print("Decode error:", e)
-                    print("Event:", event)
-
-        except Exception as e:
-            print("Error:", e)
-        stream.flush()
-
-        state["messages"].append({
-            "role": "assistant",
-            "content": llm_output
-        })
-
-        if stream_id:
-            update_checkpoint(state, stream_id, AgentType.SUB_AGENT.name)
-
+        result = self.llm_with_tools.invoke(state["messages"], config=config)
+        state["messages"].append(result)
         return state
-    
+
+
     def model_selector(self,user_input: str):
 
         gen=GeneratePydantic()
@@ -266,10 +201,45 @@ class SubAgent:
             "schema": schema
         }
     
-
     async def run(self, chunk: Text, state: StateObject | None = None):
-        config = configDetails(user_name=chunk.username, session_id=chunk.session_id, stream_id=chunk.stream_id)
-        print("[VERIFICATION SUB AGENT] received config", config)
-        return await self.run_agent(message=chunk.text, config=config, state=state)
-    
+
+        context = configDetails(
+            user_name=chunk.username,
+            session_id=chunk.session_id,
+            stream_id=chunk.stream_id,
+        )
+
+        config: RunnableConfig = {
+            "configurable": {
+                "thread_id": chunk.session_id,
+                "user_id": chunk.username,
+            }
+        }
+
+        print("[VERIFICATION SUB AGENT] received config", context, config)
+
+        final_state = None
+
+        for mode, payload in self.agent.stream(
+            {"messages": [{"role": "user", "content": chunk.text}]},
+            context=context,
+            config=config,
+            stream_mode=["messages", "updates"],
+        ):
+            if mode == "messages":
+                msg, meta = payload
+                if msg.content:
+                    print("🧠 LLM:", msg.content)
+
+            elif mode == "updates":
+                if "tools" in payload:
+                    print("\n🔥 API RESPONSE")
+                    print(payload["tools"]["api_response"])
+
+                if "run_agent" in payload:
+                    final_state = payload["run_agent"]
+                    print("\n📦 STATE KEYS:", final_state.keys())
+
+        return final_state
+
     

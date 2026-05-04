@@ -1,12 +1,12 @@
 import copy
 import uuid
-from typing import Dict
+from typing import Dict, List
 from enum import Enum
-
+from .Data import Plan
 
 
 CHECKPOINT_STORE: Dict[str, Dict] = {}
-
+PLAN_STORE: Dict[str, List[Plan]] = {}
 
 async def save_checkpoint(runtime, checkpoint_id: str):
     CHECKPOINT_STORE[checkpoint_id] = {
@@ -37,5 +37,3 @@ def update_checkpoint(state, checkpoint_id: str, agent_id = None):
               agent_id: copy.deepcopy(state)
           }
       }
-
-      

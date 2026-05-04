@@ -17,6 +17,7 @@ dependencies = [
     "langchain-groq>=1.1.0",
     "langgraph>=1.0.4",
     "numpy>=2.3.2",
+    "pandas>=2.3.3",
     "piper-tts>=1.3.0",
     "pydantic>=2.12.4",
     "pydict2class>=0.0.1",
