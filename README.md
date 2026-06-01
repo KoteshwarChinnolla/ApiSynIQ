@@ -199,9 +199,3 @@ ApiSynIQ is open source and contributions are very welcome. Whether it's a bug f
 [apache-2.0](LICENSE) — free to use, modify, and distribute.
 
 <br/>
-
-<div align="center">
-
-*Built for developers who believe APIs should talk back.*
-
-</div>
