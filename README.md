@@ -187,7 +187,7 @@ In the meantime, feel free to explore the architecture, open issues with questio
 
 ## Contributing
 
-ApiSynIQ is open source and contributions are very welcome. Whether it's a bug fix, a new tool integration, or an improvement to the RAG pipeline — open a PR and let's build this together.
+ApiSynIQ is open source, and contributions are very welcome. Whether it's a bug fix, a new tool integration, or an improvement to the RAG pipeline — open a PR and let's build this together.
 
 <br/>
 
