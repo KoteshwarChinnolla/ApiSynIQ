@@ -22,7 +22,6 @@
 ![gRPC](https://img.shields.io/badge/gRPC-Transport-4285F4?style=for-the-badge&logo=google&logoColor=white)
 
 <br/>
-
 </div>
 
 ---
